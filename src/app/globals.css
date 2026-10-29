@@ -1,0 +1,434 @@
+@import "tailwindcss";
+
+:root {
+  --ink: #14201c;
+  --ink-soft: #3a4a44;
+  --moss: #1f4a3a;
+  --leaf: #2f6b52;
+  --mist: #cfe0d6;
+  --sky: #a9c9d9;
+  --paper: #eef4f0;
+  --lake: #2a6f7a;
+  --lake-deep: #1d555e;
+  --dog: #c4782b;
+  --cat: #2a6f7a;
+  --cream-avoid: transparent;
+  --background: var(--paper);
+  --foreground: var(--ink);
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-ink: var(--ink);
+  --color-ink-soft: var(--ink-soft);
+  --color-moss: var(--moss);
+  --color-leaf: var(--leaf);
+  --color-mist: var(--mist);
+  --color-sky: var(--sky);
+  --color-paper: var(--paper);
+  --color-lake: var(--lake);
+  --color-lake-deep: var(--lake-deep);
+  --color-dog: var(--dog);
+  --color-cat: var(--cat);
+  --font-sans: var(--font-body);
+  --font-display: var(--font-display);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-body), "Noto Sans Georgian", sans-serif;
+  overflow-x: hidden;
+}
+
+::selection {
+  background: color-mix(in srgb, var(--lake) 35%, white);
+  color: var(--ink);
+}
+
+@keyframes rise {
+  from {
+    opacity: 0;
+    transform: translateY(1.25rem);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes kenburns {
+  from {
+    transform: scale(1.05) translate3d(0, 0, 0);
+  }
+  to {
+    transform: scale(1.12) translate3d(-1.5%, -1%, 0);
+  }
+}
+
+@keyframes drift {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-6px);
+  }
+}
+
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.animate-rise {
+  animation: rise 0.9s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.animate-rise-delay-1 {
+  animation: rise 0.9s cubic-bezier(0.22, 1, 0.36, 1) 0.12s both;
+}
+
+.animate-rise-delay-2 {
+  animation: rise 0.9s cubic-bezier(0.22, 1, 0.36, 1) 0.24s both;
+}
+
+.animate-rise-delay-3 {
+  animation: rise 0.9s cubic-bezier(0.22, 1, 0.36, 1) 0.36s both;
+}
+
+.animate-kenburns {
+  animation: kenburns 22s ease-out forwards;
+}
+
+.animate-drift {
+  animation: drift 5s ease-in-out infinite;
+}
+
+.animate-fade {
+  animation: fade-in 1.2s ease both;
+}
+
+.hero-scrim {
+  background:
+    linear-gradient(
+      105deg,
+      rgba(20, 32, 28, 0.72) 0%,
+      rgba(20, 32, 28, 0.45) 42%,
+      rgba(20, 32, 28, 0.18) 70%,
+      rgba(20, 32, 28, 0.08) 100%
+    ),
+    linear-gradient(to top, rgba(20, 32, 28, 0.55) 0%, transparent 42%);
+}
+
+.section-wash {
+  background:
+    radial-gradient(ellipse 80% 60% at 10% 0%, rgba(169, 201, 217, 0.35), transparent 55%),
+    radial-gradient(ellipse 70% 50% at 90% 20%, rgba(207, 224, 214, 0.55), transparent 50%),
+    linear-gradient(180deg, #e8f1ec 0%, #eef4f0 48%, #e3ebe6 100%);
+}
+
+.listing-rail {
+  scrollbar-width: thin;
+  scrollbar-color: color-mix(in srgb, var(--moss) 35%, transparent) transparent;
+}
+
+.listing-rail::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+.listing-rail::-webkit-scrollbar-thumb {
+  background: color-mix(in srgb, var(--moss) 35%, transparent);
+  border-radius: 999px;
+}
+
+.listing-rail::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+/* Leaflet overrides for იპოვე map-first UI */
+.leaflet-container {
+  font-family: var(--font-body), "Noto Sans Georgian", sans-serif;
+  background: #d8e6df;
+}
+
+.ipove-check {
+  width: 1rem;
+  height: 1rem;
+  accent-color: #1f4a3a;
+}
+
+.ipove-marker {
+  background: transparent !important;
+  border: none !important;
+  overflow: visible !important;
+}
+
+.ipove-marker svg {
+  display: block;
+  overflow: visible;
+}
+
+/* Marker clusters — keep country view readable */
+.ipove-cluster {
+  background: transparent !important;
+  border: none !important;
+}
+
+.ipove-cluster-bubble {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+  border-radius: 999px;
+  color: #fff;
+  font-weight: 700;
+  line-height: 1;
+  font-family: var(--font-body), "Noto Sans Georgian", sans-serif;
+  box-shadow:
+    0 0 0 2px rgba(255, 255, 255, 0.95),
+    0 4px 12px rgba(20, 32, 28, 0.26);
+}
+
+.ipove-cluster-mixed {
+  position: relative;
+}
+
+.ipove-cluster-mixed::before {
+  content: "";
+  position: absolute;
+  inset: 5px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.94);
+  box-shadow: inset 0 0 0 1px rgba(20, 32, 28, 0.06);
+}
+
+.ipove-cluster-mixed span {
+  position: relative;
+  z-index: 1;
+  color: #14201c;
+}
+
+.ipove-cluster-dark:not(.ipove-cluster-mixed) span {
+  color: #14201c;
+}
+
+.ipove-cluster-sm {
+  font-size: 13px;
+}
+
+.ipove-cluster-sm.ipove-cluster-mixed::before {
+  inset: 4px;
+}
+
+.ipove-cluster-md {
+  font-size: 14px;
+}
+
+.ipove-cluster-md.ipove-cluster-mixed::before {
+  inset: 5px;
+}
+
+.ipove-cluster-lg {
+  font-size: 15px;
+}
+
+.ipove-cluster-lg.ipove-cluster-mixed::before {
+  inset: 5px;
+}
+
+.marker-cluster {
+  background: transparent !important;
+}
+
+.leaflet-popup-content-wrapper {
+  border-radius: 14px;
+  box-shadow: 0 12px 36px rgba(20, 32, 28, 0.18);
+  padding: 0;
+  overflow: hidden;
+}
+
+.leaflet-popup-content {
+  margin: 0;
+}
+
+.leaflet-popup-tip {
+  box-shadow: none;
+}
+
+.ipove-popup-wrap .leaflet-popup-content-wrapper {
+  background: #fff;
+}
+
+.ipove-popup {
+  display: block;
+  width: 220px;
+  font-family: var(--font-body), "Noto Sans Georgian", sans-serif;
+  color: inherit;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.ipove-popup:hover .ipove-popup-name {
+  color: #1f4a3a;
+}
+
+.ipove-popup-media {
+  position: relative;
+}
+
+.ipove-popup-photo {
+  display: block;
+  width: 100%;
+  height: 140px;
+  object-fit: cover;
+  background: #d8e6df;
+  pointer-events: none;
+}
+
+.ipove-popup-body {
+  padding: 10px 12px 12px;
+}
+
+.ipove-popup-cap,
+.ipove-popup-name,
+.ipove-popup-place {
+  margin: 0;
+}
+
+.ipove-popup-cap {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.ipove-popup-name {
+  margin-top: 4px;
+  font-size: 17px;
+  font-weight: 700;
+  color: #14201c;
+  line-height: 1.25;
+  transition: color 0.15s ease;
+}
+
+.ipove-popup-place {
+  margin-top: 2px;
+  font-size: 13px;
+  color: #3a4a44;
+}
+
+.ipove-tooltip {
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+  padding: 0 !important;
+}
+
+.ipove-tooltip::before {
+  display: none !important;
+}
+
+.ipove-tip {
+  min-width: 120px;
+  max-width: 200px;
+  padding: 8px 10px;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.96);
+  box-shadow: 0 8px 24px rgba(20, 32, 28, 0.16);
+  font-family: var(--font-body), "Noto Sans Georgian", sans-serif;
+}
+
+.ipove-tip-cap {
+  margin: 0;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.ipove-tip-name {
+  margin: 3px 0 0;
+  font-size: 14px;
+  font-weight: 700;
+  color: #14201c;
+}
+
+.ipove-tip-place {
+  margin: 2px 0 0;
+  font-size: 12px;
+  color: #3a4a44;
+}
+
+.leaflet-bottom.leaflet-right {
+  margin-bottom: 4.5rem;
+}
+
+.leaflet-control-attribution {
+  background: rgba(255, 255, 255, 0.82) !important;
+  font-size: 10px !important;
+  border-radius: 6px 0 0 0;
+}
+
+/* App-like mobile map chrome */
+.ipove-mobile-tabbar {
+  background: rgba(255, 255, 255, 0.94);
+  border-top: 1px solid color-mix(in srgb, var(--moss) 12%, transparent);
+  box-shadow: 0 -8px 28px rgba(20, 32, 28, 0.1);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+}
+
+@media (max-width: 767px) {
+  .ipove-map-shell .leaflet-bottom.leaflet-right {
+    margin-bottom: calc(5.75rem + env(safe-area-inset-bottom, 0px));
+    margin-right: 0.5rem;
+  }
+
+  .ipove-map-shell .leaflet-control-zoom {
+    border: none !important;
+    box-shadow: 0 6px 18px rgba(20, 32, 28, 0.14) !important;
+    border-radius: 12px !important;
+    overflow: hidden;
+  }
+
+  .ipove-map-shell .leaflet-control-attribution {
+    max-width: 46vw;
+    margin: 0 0.4rem 0.35rem 0 !important;
+  }
+
+  .ipove-popup {
+    max-width: min(86vw, 280px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-rise,
+  .animate-rise-delay-1,
+  .animate-rise-delay-2,
+  .animate-rise-delay-3,
+  .animate-kenburns,
+  .animate-drift,
+  .animate-fade {
+    animation: none !important;
+  }
+
+  html {
+    scroll-behavior: auto;
+  }
+}
