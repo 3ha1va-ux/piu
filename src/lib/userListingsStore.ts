@@ -194,3 +194,30 @@ export async function createUserListing(
     return listing;
   });
 }
+
+export async function deleteUserListing(id: string): Promise<boolean> {
+  return withWriteLock(async () => {
+    const all = await readUserListings();
+    const index = all.findIndex((item) => item.id === id);
+    if (index === -1) return false;
+    const next = all.filter((item) => item.id !== id);
+    await persistListings(next);
+    return true;
+  });
+}
+
+export async function updateUserListing(
+  id: string,
+  updates: Partial<PetListing>,
+): Promise<PetListing | null> {
+  return withWriteLock(async () => {
+    const all = await readUserListings();
+    const index = all.findIndex((item) => item.id === id);
+    if (index === -1) return null;
+    const updated: PetListing = { ...all[index], ...updates };
+    const next = [...all];
+    next[index] = updated;
+    await persistListings(next);
+    return updated;
+  });
+}
