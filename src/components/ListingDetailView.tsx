@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import PosterModal from "@/components/PosterModal";
 import type { PetListing } from "@/data/listings-types";
 import { markerVisual, toneColor } from "@/lib/markerStyles";
 
@@ -14,6 +15,7 @@ function formatDate(raw?: string): string | null {
 }
 
 export default function ListingDetailView({ listing }: { listing: PetListing }) {
+  const [posterOpen, setPosterOpen] = useState(false);
   const photos = listing.photoUrls ?? [];
   const [index, setIndex] = useState(() =>
     Math.min(
@@ -176,13 +178,13 @@ export default function ListingDetailView({ listing }: { listing: PetListing }) 
         {listing.contactPhone ? (
           <a
             href={`tel:${listing.contactPhone}`}
-            className="mt-6 inline-flex h-12 w-full items-center justify-center rounded-md bg-moss px-5 font-semibold text-white transition hover:bg-leaf"
+            className="mt-6 inline-flex h-12 w-full items-center justify-center rounded-xl bg-moss px-5 font-semibold text-white transition hover:bg-leaf"
           >
             დარეკვა · {listing.contactPhone}
           </a>
         ) : null}
 
-        <div className="mt-3">
+        <div className="mt-3 flex gap-2">
           <Link
             href={`/?focus=${encodeURIComponent(listing.id)}`}
             onClick={() => {
@@ -192,15 +194,28 @@ export default function ListingDetailView({ listing }: { listing: PetListing }) 
                 /* ignore */
               }
             }}
-            className="inline-flex h-11 w-full items-center justify-center rounded-md border border-moss/20 bg-white px-4 text-sm font-semibold text-ink transition hover:bg-paper"
+            className="inline-flex h-11 flex-1 items-center justify-center rounded-xl border border-moss/20 bg-white px-4 text-xs sm:text-sm font-semibold text-ink transition hover:bg-paper"
           >
             რუკაზე ნახვა
           </Link>
+          <button
+            type="button"
+            onClick={() => setPosterOpen(true)}
+            className="inline-flex h-11 items-center justify-center gap-1.5 rounded-xl border border-moss/20 bg-white px-4 text-xs sm:text-sm font-semibold text-ink transition hover:bg-paper"
+            title="სამძებრო პოსტერის ამობეჭდვა"
+          >
+            <span>🖹</span>
+            <span>პოსტერი</span>
+          </button>
         </div>
 
         <p className="mt-5 text-xs text-ink-soft">
           კოორდინატები: {listing.lat.toFixed(5)}, {listing.lng.toFixed(5)}
         </p>
+
+        {posterOpen && (
+          <PosterModal listing={listing} onClose={() => setPosterOpen(false)} />
+        )}
       </div>
     </article>
   );

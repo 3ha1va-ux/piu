@@ -27,6 +27,7 @@ import type {
   PlaceTarget,
   ViewportPayload,
 } from "@/components/PetMap";
+import { useUserAuth } from "@/lib/userAuthContext";
 
 const FOCUS_STORAGE_KEY = "ipove-map-focus";
 
@@ -236,6 +237,7 @@ function NavIcon({ children }: { children: ReactNode }) {
 }
 
 export default function MapExperience() {
+  const { user, openAuthModal } = useUserAuth();
   const [toneFilters, setToneFilters] = useState<ListingTone[]>([...ALL_TONES]);
   const [animalFilters, setAnimalFilters] =
     useState<AnimalType[]>([...ALL_ANIMALS]);
@@ -573,6 +575,29 @@ export default function MapExperience() {
             >
               დამატება
             </Link>
+            {user ? (
+              <Link
+                href="/chemi-gancxadebebi"
+                className="hidden h-[42px] shrink-0 items-center gap-2 rounded-xl border border-moss/10 bg-white/95 px-3.5 text-xs font-semibold text-ink shadow-[0_8px_24px_rgba(20,32,28,0.12)] backdrop-blur-md transition hover:bg-white md:inline-flex"
+                title="ჩემი კაბინეტი"
+              >
+                <div className="w-5 h-5 rounded-full bg-moss text-white flex items-center justify-center font-bold text-[10px] uppercase">
+                  {user.name ? user.name[0] : user.email[0]}
+                </div>
+                <span className="max-w-[100px] truncate">{user.name || "კაბინეტი"}</span>
+              </Link>
+            ) : (
+              <button
+                type="button"
+                onClick={openAuthModal}
+                className="hidden h-[42px] shrink-0 items-center gap-1.5 rounded-xl border border-moss/10 bg-white/95 px-3.5 text-xs font-semibold text-ink shadow-[0_8px_24px_rgba(20,32,28,0.12)] backdrop-blur-md transition hover:bg-white md:inline-flex"
+              >
+                <svg className="w-4 h-4 text-ink-soft" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                </svg>
+                <span>შესვლა</span>
+              </button>
+            )}
           </div>
         </header>
 
@@ -829,6 +854,38 @@ export default function MapExperience() {
               </NavIcon>
               რუკა
             </span>
+
+            {user ? (
+              <Link
+                href="/chemi-gancxadebebi"
+                className="flex min-w-0 flex-1 flex-col items-center gap-0.5 rounded-xl px-1 py-1.5 text-[11px] font-semibold text-ink-soft"
+              >
+                <NavIcon>
+                  <div className="w-5 h-5 rounded-full bg-moss text-white flex items-center justify-center font-bold text-[9px] uppercase">
+                    {user.name ? user.name[0] : user.email[0]}
+                  </div>
+                </NavIcon>
+                კაბინეტი
+              </Link>
+            ) : (
+              <button
+                type="button"
+                onClick={openAuthModal}
+                className="flex min-w-0 flex-1 flex-col items-center gap-0.5 rounded-xl px-1 py-1.5 text-[11px] font-semibold text-ink-soft"
+              >
+                <NavIcon>
+                  <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
+                    <path
+                      d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                      strokeLinecap="round"
+                    />
+                  </svg>
+                </NavIcon>
+                შესვლა
+              </button>
+            )}
           </div>
         </nav>
       </div>
