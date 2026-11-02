@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { createPortal } from "react-dom";
 import { useClientReady, useLatestRef } from "@/lib/useClientReady";
 import {
   MapContainer,
@@ -19,13 +18,7 @@ import {
   GEORGIA_ZOOM,
 } from "@/data/listings-types";
 import type { MapBBox, ServerCluster, ToneCounts } from "@/data/listings-types";
-import {
-  clearSavedMapView,
-  formatMapViewSnippet,
-  resolveMapView,
-  saveMapView,
-  viewFromMap,
-} from "@/lib/mapFrame";
+import { resolveMapView } from "@/lib/mapFrame";
 import { mapPinHtml, markerVisual, toneColor, TONE_COLORS } from "@/lib/markerStyles";
 import "leaflet/dist/leaflet.css";
 import "leaflet.markercluster/dist/MarkerCluster.css";
@@ -609,89 +602,6 @@ function FitGeorgiaOnBoot({ enabled }: { enabled: boolean }) {
   return null;
 }
 
-/** Mouse-tune on the screen you like, then save — same zoom on the other monitor. */
-function MapFrameSaveControl() {
-  const map = useMap();
-  const host = map.getContainer();
-  const [note, setNote] = useState<string | null>(null);
-
-  useEffect(() => {
-    if (!note) return;
-    const t = window.setTimeout(() => setNote(null), 3200);
-    return () => window.clearTimeout(t);
-  }, [note]);
-
-  function persistCurrentView() {
-    const view = viewFromMap(map);
-    saveMapView(view);
-    const snippet = formatMapViewSnippet(view);
-    void navigator.clipboard.writeText(snippet).catch(() => undefined);
-    console.info("[იპოვე] საწყისი ხედი შენახულია:\n" + snippet);
-    setNote("შენახულია — განაახლე მეორე ეკრანიც");
-  }
-
-  function resetToCodeDefault() {
-    clearSavedMapView();
-    const view = resolveMapView();
-    map.setView(view.center, view.zoom, { animate: true });
-    setNote("ნაგულისხმევი ხედი აღდგა");
-  }
-
-  useEffect(() => {
-    const onKey = (e: KeyboardEvent) => {
-      if (!(e.ctrlKey && e.shiftKey && e.key.toLowerCase() === "g")) return;
-      if (
-        e.target instanceof HTMLElement &&
-        (e.target.tagName === "INPUT" ||
-          e.target.tagName === "TEXTAREA" ||
-          e.target.isContentEditable)
-      ) {
-        return;
-      }
-      e.preventDefault();
-      const view = viewFromMap(map);
-      saveMapView(view);
-      const snippet = formatMapViewSnippet(view);
-      void navigator.clipboard.writeText(snippet).catch(() => undefined);
-      console.info("[იპოვე] საწყისი ხედი შენახულია:\n" + snippet);
-      setNote("შენახულია — განაახლე მეორე ეკრანიც");
-    };
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, [map]);
-
-  if (!host) return null;
-
-  return createPortal(
-    <div className="pointer-events-auto absolute left-3 top-20 z-[1100] flex max-w-[13.5rem] flex-col gap-1.5 md:top-4">
-      <button
-        type="button"
-        onClick={persistCurrentView}
-        className="rounded-xl border border-moss/15 bg-white/95 px-3 py-2 text-left text-[12px] font-semibold text-ink shadow-[0_8px_24px_rgba(20,32,28,0.14)] backdrop-blur-md transition hover:bg-mist"
-      >
-        ეს ხედი შეინახე
-      </button>
-      <button
-        type="button"
-        onClick={resetToCodeDefault}
-        className="rounded-xl border border-moss/10 bg-white/80 px-3 py-1.5 text-left text-[11px] font-medium text-ink-soft backdrop-blur-md transition hover:bg-mist hover:text-ink"
-      >
-        ნაგულისხმევი
-      </button>
-      {note ? (
-        <p className="rounded-lg bg-ink/90 px-2.5 py-1.5 text-[11px] font-medium text-white">
-          {note}
-        </p>
-      ) : (
-        <p className="px-0.5 text-[10px] leading-snug text-ink-soft/90 drop-shadow">
-          მოარგე იმ ეკრანზე, რომელიც მოგწონს → შეინახე
-        </p>
-      )}
-    </div>,
-    host,
-  );
-}
-
 /** Fly/fit to a searched place (Tbilisi vs Avlabari style zoom). */
 function PlaceFlight({ target }: { target: PlaceTarget | null }) {
   const map = useMap();
@@ -785,7 +695,6 @@ export default function PetMap({
       />
       <ZoomControl position="bottomright" />
       <FitGeorgiaOnBoot enabled={boot.fitGeorgia} />
-      <MapFrameSaveControl />
       <ViewportReporter onViewportChange={onViewportChange} />
       <PlaceFlight target={placeTarget} />
       <MapBlankClick onSelect={onSelect} />
