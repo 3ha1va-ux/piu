@@ -21,6 +21,12 @@ import {
   storeMediaObject,
   writeJsonToR2,
 } from "@/lib/mediaStorage";
+import {
+  supabaseAdmin,
+  dbRowToPetListing,
+  petListingToDbRow,
+  type DbListingRow,
+} from "@/lib/supabase";
 
 const DATA_DIR = path.join(process.cwd(), "data");
 const STORE_PATH = path.join(DATA_DIR, "user-listings.json");
@@ -70,6 +76,22 @@ let memoryCache: PetListing[] | null = null;
 let hydratePromise: Promise<PetListing[]> | null = null;
 
 async function hydrate(): Promise<PetListing[]> {
+  try {
+    const { data, error } = await supabaseAdmin
+      .from("listings")
+      .select("*")
+      .eq("status", "active")
+      .order("created_at", { ascending: false });
+
+    if (!error && Array.isArray(data)) {
+      const list = (data as DbListingRow[]).map(dbRowToPetListing);
+      memoryCache = list;
+      return list;
+    }
+  } catch (err) {
+    console.warn("Supabase fetch failed, trying local fallback:", err);
+  }
+
   if (isR2Enabled()) {
     const remote = await readJsonFromR2<PetListing[]>(R2_LISTINGS_KEY);
     if (Array.isArray(remote)) {
@@ -188,6 +210,18 @@ export async function createUserListing(
   };
 
   return withWriteLock(async () => {
+    // 1. Persist to Supabase Postgres
+    try {
+      const dbRow = petListingToDbRow(listing);
+      const { error } = await supabaseAdmin.from("listings").insert([dbRow]);
+      if (error) {
+        console.error("Supabase insert error:", error);
+      }
+    } catch (err) {
+      console.error("Failed to write listing to Supabase:", err);
+    }
+
+    // 2. Persist to local cache / backup
     const all = await readUserListings();
     const next = [listing, ...all];
     await persistListings(next);
@@ -197,6 +231,12 @@ export async function createUserListing(
 
 export async function deleteUserListing(id: string): Promise<boolean> {
   return withWriteLock(async () => {
+    try {
+      await supabaseAdmin.from("listings").delete().eq("id", id);
+    } catch (err) {
+      console.error("Supabase delete error:", err);
+    }
+
     const all = await readUserListings();
     const index = all.findIndex((item) => item.id === id);
     if (index === -1) return false;
@@ -211,6 +251,26 @@ export async function updateUserListing(
   updates: Partial<PetListing>,
 ): Promise<PetListing | null> {
   return withWriteLock(async () => {
+    try {
+      const dbUpdates: Record<string, unknown> = {};
+      if (updates.name !== undefined) dbUpdates.name = updates.name;
+      if (updates.place !== undefined) dbUpdates.place = updates.place;
+      if (updates.description !== undefined) dbUpdates.description = updates.description;
+      if (updates.status !== undefined) dbUpdates.status = updates.status;
+      if (updates.color !== undefined) dbUpdates.color = updates.color;
+      if (updates.breed !== undefined) dbUpdates.breed = updates.breed;
+      if (updates.age !== undefined) dbUpdates.age = updates.age;
+      if (updates.reward !== undefined) dbUpdates.reward = updates.reward;
+      if (updates.contactPhone !== undefined) dbUpdates.contact_phone = updates.contactPhone;
+      if (updates.contactName !== undefined) dbUpdates.contact_name = updates.contactName;
+      if (updates.contactSocial !== undefined) dbUpdates.contact_social = updates.contactSocial;
+      dbUpdates.updated_at = new Date().toISOString();
+
+      await supabaseAdmin.from("listings").update(dbUpdates).eq("id", id);
+    } catch (err) {
+      console.error("Supabase update error:", err);
+    }
+
     const all = await readUserListings();
     const index = all.findIndex((item) => item.id === id);
     if (index === -1) return null;
