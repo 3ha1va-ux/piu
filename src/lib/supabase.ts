@@ -1,26 +1,32 @@
 import { createClient } from "@supabase/supabase-js";
 import type { PetListing, CreateListingPayload } from "@/data/listings-types";
 
+const DEFAULT_SUPABASE_URL = "https://etxrjqodhxbbpcmwdkjb.supabase.co";
+const DEFAULT_ANON_KEY = "sb_publishable_M14kTz239MvcYwCvuDwH-A_ctplZszw";
+
 const supabaseUrl =
-  process.env.NEXT_PUBLIC_SUPABASE_URL ||
-  "https://etxrjqodhxbbpcmwdkjb.supabase.co";
+  process.env.NEXT_PUBLIC_SUPABASE_URL || DEFAULT_SUPABASE_URL;
 
 const supabaseAnonKey =
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "";
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || DEFAULT_ANON_KEY;
 
 const supabaseServiceRoleKey =
   process.env.SUPABASE_SERVICE_ROLE_KEY || supabaseAnonKey;
 
 /** Public client for browser / anonymous queries */
-export const supabase = createClient(supabaseUrl, supabaseAnonKey);
+export const supabase = createClient(supabaseUrl, supabaseAnonKey || "dummy-anon-key");
 
 /** Privileged server client (bypasses RLS for admin tasks & user management) */
-export const supabaseAdmin = createClient(supabaseUrl, supabaseServiceRoleKey, {
-  auth: {
-    persistSession: false,
-    autoRefreshToken: false,
+export const supabaseAdmin = createClient(
+  supabaseUrl,
+  supabaseServiceRoleKey || supabaseAnonKey || "dummy-admin-key",
+  {
+    auth: {
+      persistSession: false,
+      autoRefreshToken: false,
+    },
   },
-});
+);
 
 export type DbListingRow = {
   id: string;
