@@ -327,15 +327,15 @@ function ClusteredMarkers({
       zoomToBoundsOnClick: false,
       spiderfyOnMaxZoom: true,
       spiderfyDistanceMultiplier: 1.6,
-      disableClusteringAtZoom: 14,
-      // Must exceed bubble diameter (~42px with ring) so sibling clusters don't overlap
+      disableClusteringAtZoom: 16,
       maxClusterRadius: (zoom: number) => {
-        if (zoom < 11) return 110;
-        if (zoom < 13) return 90;
-        return 70;
+        if (zoom < 9) return 100;
+        if (zoom < 12) return 85;
+        if (zoom < 14) return 70;
+        return 55;
       },
-      chunkedLoading: false,
-      animate: false,
+      chunkedLoading: true,
+      animate: true,
       animateAddingMarkers: false,
       removeOutsideVisibleBounds: true,
       iconCreateFunction: leafletClusterIcon,
@@ -343,23 +343,21 @@ function ClusteredMarkers({
 
     clusterGroup.on("clusterclick", (event) => {
       const cluster = event.layer as L.MarkerCluster;
-      const count = cluster.getChildCount();
       const bounds = cluster.getBounds();
       const targetZoom = map.getBoundsZoom(bounds, false);
       const currentZoom = map.getZoom();
+
       const shouldSpiderfy =
-        count <= 40 ||
-        targetZoom <= currentZoom + 1 ||
-        currentZoom >= map.getMaxZoom() - 1;
+        targetZoom <= currentZoom || currentZoom >= 17;
 
       if (shouldSpiderfy) {
         cluster.spiderfy();
         return;
       }
 
-      map.fitBounds(bounds.pad(0.2), {
-        padding: [48, 48],
-        maxZoom: Math.min(16, Math.max(targetZoom, currentZoom + 2)),
+      map.flyToBounds(bounds.pad(0.25), {
+        duration: 0.55,
+        easeLinearity: 0.25,
       });
     });
 
@@ -382,10 +380,8 @@ function ClusteredMarkers({
         if (pending) {
           pendingListingsRef.current = null;
           syncListings.current(pending);
-        } else {
-          remountMarkers.current();
         }
-      }, 0);
+      }, 50);
     };
 
     map.on("zoomstart", onZoomStart);

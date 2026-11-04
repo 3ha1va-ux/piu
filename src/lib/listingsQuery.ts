@@ -143,16 +143,6 @@ export async function queryListings(params: {
   );
   const matched = [...userMatched, ...demoMatched];
   const totalMatched = matched.length;
-
-  if (zoom < 10) {
-    return {
-      totalMatched,
-      mode: "grid",
-      items: withDemoPhotosList(matched),
-      clusters: buildGridClusters(matched, zoom),
-    };
-  }
-
   return {
     totalMatched,
     mode: "points",
