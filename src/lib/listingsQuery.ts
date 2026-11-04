@@ -148,7 +148,7 @@ export async function queryListings(params: {
     return {
       totalMatched,
       mode: "grid",
-      items: [],
+      items: withDemoPhotosList(matched.slice(0, 50)),
       clusters: buildGridClusters(matched, zoom),
     };
   }

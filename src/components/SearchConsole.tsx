@@ -68,12 +68,12 @@ export default function SearchConsole({
   const rootRef = useRef<HTMLDivElement>(null);
 
   const isMap = variant === "map";
-  const showPanel = expanded || !isMap;
+  const showPanel = !isMap && expanded;
 
   const digits = q.replace(/\D/g, "");
   const hasQuery = q.trim().length >= 2 || digits.length >= 3;
   const hasFilter =
-    tones.length > 0 || animals.length > 0 || Boolean(dateFrom || dateTo);
+    !isMap && (tones.length > 0 || animals.length > 0 || Boolean(dateFrom || dateTo));
   const canSearch = hasQuery || hasFilter;
   const placeQuery = q.trim();
   const placesQueryActive = isMap && placeQuery.length >= 2;
@@ -84,11 +84,10 @@ export default function SearchConsole({
   const showPlacesLoading = placesQueryActive && placesLoading;
   const showMapResults =
     isMap &&
-    showPanel &&
-    (visibleSearched ||
-      loading ||
+    (hasQuery || placesQueryActive) &&
+    (visiblePlaces.length > 0 ||
       showPlacesLoading ||
-      visiblePlaces.length > 0);
+      (searched && (visibleItems.length > 0 || loading)));
 
   useEffect(() => {
     if (!isMap) return;
@@ -136,8 +135,13 @@ export default function SearchConsole({
     const digitsInner = q.replace(/\D/g, "");
     const hasQueryInner = q.trim().length >= 2 || digitsInner.length >= 3;
     const hasFilterInner =
-      tones.length > 0 || animals.length > 0 || Boolean(dateFrom || dateTo);
-    if (!hasQueryInner && !hasFilterInner) return;
+      !isMap && (tones.length > 0 || animals.length > 0 || Boolean(dateFrom || dateTo));
+    if (!hasQueryInner && !hasFilterInner) {
+      setItems([]);
+      setTotal(0);
+      setSearched(false);
+      return;
+    }
 
     const ac = new AbortController();
     debounceRef.current = setTimeout(async () => {
@@ -402,10 +406,27 @@ export default function SearchConsole({
                   e.preventDefault();
                   if (places[0]) handleSelectPlace(places[0]);
                 }}
-                className="w-full rounded-xl border border-moss/15 bg-white py-2.5 pl-9 pr-3 text-sm text-ink outline-none focus:border-moss md:rounded-lg"
+                className={`w-full rounded-xl border border-moss/15 bg-white py-2.5 pl-9 text-sm text-ink outline-none focus:border-moss md:rounded-lg ${q ? "pr-8" : "pr-3"}`}
               />
+              {q ? (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setQ("");
+                    setPlaces([]);
+                    setItems([]);
+                    setSearched(false);
+                  }}
+                  className="absolute right-2.5 top-1/2 -translate-y-1/2 rounded-full p-1 text-ink-soft hover:bg-paper hover:text-ink"
+                  aria-label="გასუფთავება"
+                >
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <path d="M18 6L6 18M6 6l12 12" strokeLinecap="round" strokeLinejoin="round" />
+                  </svg>
+                </button>
+              ) : null}
             </div>
-            {isMap ? (
+            {!isMap ? (
               <button
                 type="button"
                 onClick={() => setExpanded((v) => !v)}
