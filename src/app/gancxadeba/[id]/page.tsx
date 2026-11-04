@@ -44,8 +44,37 @@ export default async function ListingDetailPage({ params }: PageProps) {
   const listing = await getListingById(decodeURIComponent(id));
   if (!listing) notFound();
 
+  const jsonLd = {
+    "@context": "https://schema.org",
+    "@type": "ItemPage",
+    name: `${listing.kind} ${listing.animal} "${listing.name}"`,
+    description:
+      listing.description ||
+      `${listing.kind} ${listing.animal} — ${listing.place}`,
+    image: listing.photoUrls?.[0] || listing.photoIconUrl,
+    mainEntity: {
+      "@type": "Thing",
+      name: listing.name,
+      category: listing.animal,
+      description: listing.description,
+      location: {
+        "@type": "Place",
+        name: listing.place,
+        geo: {
+          "@type": "GeoCoordinates",
+          latitude: listing.lat,
+          longitude: listing.lng,
+        },
+      },
+    },
+  };
+
   return (
     <div className="min-h-full bg-[linear-gradient(165deg,#e8f1ec_0%,#eef4f0_45%,#dce9e2_100%)]">
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+      />
       <SiteHeader />
 
       <main className="mx-auto w-full max-w-5xl px-4 py-8 sm:px-6 pb-16 md:px-8">
