@@ -15,11 +15,27 @@ export async function generateMetadata({
   const { id } = await params;
   const listing = await getListingById(decodeURIComponent(id));
   if (!listing) return { title: "განცხადება — piu.ge" };
+
+  const title = `${listing.name} · ${listing.place} — piu.ge`;
+  const description =
+    listing.description ||
+    `${markerCaption(listing.animal, listing.tone)} — ${listing.place}`;
+  const photo = listing.photoUrls?.[0] || listing.photoIconUrl;
+
   return {
-    title: `${listing.name} · ${listing.place} — piu.ge`,
-    description:
-      listing.description ||
-      `${markerCaption(listing.animal, listing.tone)} — ${listing.place}`,
+    title,
+    description,
+    openGraph: {
+      title,
+      description,
+      images: photo ? [{ url: photo, alt: listing.name }] : [],
+    },
+    twitter: {
+      card: "summary_large_image",
+      title,
+      description,
+      images: photo ? [photo] : [],
+    },
   };
 }
 

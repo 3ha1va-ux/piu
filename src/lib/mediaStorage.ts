@@ -7,6 +7,7 @@ import {
   PutObjectCommand,
   GetObjectCommand,
 } from "@aws-sdk/client-s3";
+import { supabaseAdmin } from "@/lib/supabase";
 
 const UPLOADS_DIR = path.join(process.cwd(), "public", "uploads");
 
@@ -57,6 +58,27 @@ export async function storeMediaObject(params: {
 }): Promise<StoredObject> {
   const { key, body, contentType } = params;
 
+  // 1. Supabase Storage (primary persistent storage for production & Netlify)
+  try {
+    const cleanKey = key.replace(/^\/+/, "");
+    const { data, error } = await supabaseAdmin.storage
+      .from("pet-media")
+      .upload(cleanKey, body, {
+        contentType,
+        upsert: true,
+      });
+
+    if (!error && data) {
+      const { data: publicData } = supabaseAdmin.storage
+        .from("pet-media")
+        .getPublicUrl(cleanKey);
+      return { key: cleanKey, url: publicData.publicUrl };
+    }
+  } catch (err) {
+    console.warn("Supabase storage upload failed, checking fallbacks:", err);
+  }
+
+  // 2. Cloudflare R2
   if (r2Configured()) {
     const bucket = process.env.R2_BUCKET_NAME!;
     const publicBase = process.env.R2_PUBLIC_URL!.replace(/\/$/, "");
