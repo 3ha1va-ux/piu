@@ -49,6 +49,19 @@ export default function RootLayout({
       suppressHydrationWarning
     >
       <body className="min-h-full antialiased" suppressHydrationWarning>
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `(function(){
+              function kill(){
+                var f=document.querySelectorAll('#nl-badge-frame,#nl-hud-frame,iframe[title*="Netlify"]');
+                for(var i=0;i<f.length;i++){f[i].remove();}
+              }
+              kill();
+              var observer=new MutationObserver(kill);
+              observer.observe(document.documentElement,{childList:true,subtree:true});
+            })();`,
+          }}
+        />
         <UserAuthProvider>
           {children}
           <AuthModal />
