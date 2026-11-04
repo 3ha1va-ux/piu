@@ -44,7 +44,11 @@ function getR2Client(): S3Client {
 }
 
 function ensureLocalUploadsDir() {
-  if (!existsSync(UPLOADS_DIR)) mkdirSync(UPLOADS_DIR, { recursive: true });
+  try {
+    if (!existsSync(UPLOADS_DIR)) mkdirSync(UPLOADS_DIR, { recursive: true });
+  } catch {
+    // Read-only serverless filesystem
+  }
 }
 
 /**

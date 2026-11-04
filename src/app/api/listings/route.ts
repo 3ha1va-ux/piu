@@ -49,33 +49,39 @@ function isTri(v: string): v is TriState {
 }
 
 export async function GET(request: Request) {
-  const { searchParams } = new URL(request.url);
+  try {
+    const { searchParams } = new URL(request.url);
 
-  const west = Number(searchParams.get("west"));
-  const south = Number(searchParams.get("south"));
-  const east = Number(searchParams.get("east"));
-  const north = Number(searchParams.get("north"));
-  const zoom = Number(searchParams.get("zoom") ?? "7");
+    const west = Number(searchParams.get("west"));
+    const south = Number(searchParams.get("south"));
+    const east = Number(searchParams.get("east"));
+    const north = Number(searchParams.get("north"));
+    const zoom = Number(searchParams.get("zoom") ?? "7");
 
-  if (![west, south, east, north, zoom].every((n) => Number.isFinite(n))) {
-    return NextResponse.json({ error: "Invalid bbox/zoom" }, { status: 400 });
+    if (![west, south, east, north, zoom].every((n) => Number.isFinite(n))) {
+      return NextResponse.json({ error: "Invalid bbox/zoom" }, { status: 400 });
+    }
+
+    const tones = parseList<ListingTone>(searchParams.get("tones"), TONES);
+    const animals = parseList<AnimalType>(searchParams.get("animals"), ANIMALS);
+
+    const result = await queryListings({
+      bbox: { west, south, east, north },
+      zoom,
+      tones,
+      animals,
+    });
+
+    return NextResponse.json(result, {
+      headers: {
+        "Cache-Control": "no-store",
+      },
+    });
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : String(err);
+    console.error("GET /api/listings error:", message);
+    return NextResponse.json({ error: message }, { status: 500 });
   }
-
-  const tones = parseList<ListingTone>(searchParams.get("tones"), TONES);
-  const animals = parseList<AnimalType>(searchParams.get("animals"), ANIMALS);
-
-  const result = await queryListings({
-    bbox: { west, south, east, north },
-    zoom,
-    tones,
-    animals,
-  });
-
-  return NextResponse.json(result, {
-    headers: {
-      "Cache-Control": "no-store",
-    },
-  });
 }
 
 export async function POST(request: Request) {

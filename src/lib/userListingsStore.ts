@@ -38,13 +38,17 @@ function kindFromTone(tone: ListingTone): ListingKind {
 }
 
 function ensureDataDir() {
-  if (!existsSync(DATA_DIR)) mkdirSync(DATA_DIR, { recursive: true });
+  try {
+    if (!existsSync(DATA_DIR)) mkdirSync(DATA_DIR, { recursive: true });
+  } catch {
+    // Read-only filesystem in serverless environments (Netlify/AWS Lambda)
+  }
 }
 
 function readLocalFile(): PetListing[] {
-  ensureDataDir();
-  if (!existsSync(STORE_PATH)) return [];
   try {
+    ensureDataDir();
+    if (!existsSync(STORE_PATH)) return [];
     const raw = readFileSync(STORE_PATH, "utf8");
     const parsed = JSON.parse(raw) as PetListing[];
     return Array.isArray(parsed) ? parsed : [];
@@ -54,10 +58,14 @@ function readLocalFile(): PetListing[] {
 }
 
 function writeLocalFile(listings: PetListing[]) {
-  ensureDataDir();
-  // Atomic replace avoids torn reads when two writes overlap on disk.
-  writeFileSync(STORE_TMP, JSON.stringify(listings, null, 2), "utf8");
-  renameSync(STORE_TMP, STORE_PATH);
+  try {
+    ensureDataDir();
+    // Atomic replace avoids torn reads when two writes overlap on disk.
+    writeFileSync(STORE_TMP, JSON.stringify(listings, null, 2), "utf8");
+    renameSync(STORE_TMP, STORE_PATH);
+  } catch {
+    // Ignore writes on read-only serverless filesystem
+  }
 }
 
 /** In-process mutex so concurrent creates don't clobber each other. */
