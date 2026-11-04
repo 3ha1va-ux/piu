@@ -149,10 +149,16 @@ function extensionFor(type: string, fallback: string): string {
   return fallback;
 }
 
-export {
-  processAndStoreListingPhotos as saveListingPhotos,
-  MAX_PHOTO_UPLOAD_BYTES,
-} from "@/lib/processListingPhotos";
+export const MAX_PHOTO_UPLOAD_BYTES = 12_000_000;
+
+export async function saveListingPhotos(
+  listingId: string,
+  files: File[],
+  mainPhotoIndex = 0,
+) {
+  const { processAndStoreListingPhotos } = await import("@/lib/processListingPhotos");
+  return processAndStoreListingPhotos(listingId, files, mainPhotoIndex);
+}
 
 export async function saveListingVideo(
   listingId: string,

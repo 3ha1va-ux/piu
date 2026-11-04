@@ -1,6 +1,5 @@
 import "server-only";
 
-import sharp from "sharp";
 import { storeMediaObject } from "@/lib/mediaStorage";
 
 /** Max upload size accepted before server-side compression (bytes). */
@@ -12,39 +11,29 @@ export type ProcessedListingPhotos = {
   mainPhotoIndex: number;
 };
 
-/**
- * Compress a listing photo to AVIF (~200–400KB typical) and optionally a
- * tiny list icon (~5–10KB).
- */
-async function encodeFullAvif(input: Buffer): Promise<Buffer> {
-  return sharp(input)
-    .rotate()
-    .resize({
-      width: 1600,
-      height: 1600,
-      fit: "inside",
-      withoutEnlargement: true,
-    })
-    .avif({ quality: 52, effort: 4 })
-    .toBuffer();
-}
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+let sharpInstance: any = null;
+let sharpChecked = false;
 
-async function encodeIconAvif(input: Buffer): Promise<Buffer> {
-  return sharp(input)
-    .rotate()
-    .resize({
-      width: 72,
-      height: 72,
-      fit: "cover",
-      position: "attention",
-    })
-    .avif({ quality: 38, effort: 4 })
-    .toBuffer();
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+async function getSharp(): Promise<any | null> {
+  if (sharpChecked) return sharpInstance;
+  sharpChecked = true;
+  try {
+    // Dynamic import prevents sharp native binary crash at startup in serverless environments
+    const mod = await import("sharp");
+    sharpInstance = mod.default || mod;
+    return sharpInstance;
+  } catch (err) {
+    console.warn("sharp library is not available in current runtime, falling back to raw media storage:", err);
+    sharpInstance = null;
+    return null;
+  }
 }
 
 /**
  * Process uploaded files: AVIF gallery images + one tiny icon for the main photo.
- * Falls back to JPEG if AVIF encoding fails on a given file.
+ * Falls back to JPEG or raw storage if sharp/AVIF encoding fails.
  */
 export async function processAndStoreListingPhotos(
   listingId: string,
@@ -63,17 +52,35 @@ export async function processAndStoreListingPhotos(
 
   const photoUrls: string[] = [];
   let photoIconUrl = "";
+  const sharp = await getSharp();
 
   for (let i = 0; i < images.length; i++) {
     const file = images[i]!;
     const input = Buffer.from(await file.arrayBuffer());
 
+    // If sharp is not available (e.g. Lambda without native libvips), store raw image
+    if (!sharp) {
+      const ext = file.type.includes("png")
+        ? "png"
+        : file.type.includes("webp")
+        ? "webp"
+        : "jpg";
+      const full = await storeMediaObject({
+        key: `uploads/${listingId}/photo-${i + 1}.${ext}`,
+        body: input,
+        contentType: file.type || "image/jpeg",
+      });
+      photoUrls.push(full.url);
+      if (i === clampedMain) {
+        photoIconUrl = full.url;
+      }
+      continue;
+    }
+
     let fullBuf: Buffer;
     let fullType = "image/avif";
     let fullExt = "avif";
     try {
-      fullBuf = await encodeFullAvif(input);
-    } catch {
       fullBuf = await sharp(input)
         .rotate()
         .resize({
@@ -82,10 +89,27 @@ export async function processAndStoreListingPhotos(
           fit: "inside",
           withoutEnlargement: true,
         })
-        .jpeg({ quality: 82, mozjpeg: true })
+        .avif({ quality: 52, effort: 4 })
         .toBuffer();
-      fullType = "image/jpeg";
-      fullExt = "jpg";
+    } catch {
+      try {
+        fullBuf = await sharp(input)
+          .rotate()
+          .resize({
+            width: 1600,
+            height: 1600,
+            fit: "inside",
+            withoutEnlargement: true,
+          })
+          .jpeg({ quality: 82, mozjpeg: true })
+          .toBuffer();
+        fullType = "image/jpeg";
+        fullExt = "jpg";
+      } catch {
+        fullBuf = input;
+        fullType = file.type || "image/jpeg";
+        fullExt = "jpg";
+      }
     }
 
     const full = await storeMediaObject({
@@ -100,15 +124,25 @@ export async function processAndStoreListingPhotos(
       let iconType = "image/avif";
       let iconExt = "avif";
       try {
-        iconBuf = await encodeIconAvif(input);
-      } catch {
         iconBuf = await sharp(input)
           .rotate()
           .resize({ width: 72, height: 72, fit: "cover", position: "attention" })
-          .jpeg({ quality: 70, mozjpeg: true })
+          .avif({ quality: 38, effort: 4 })
           .toBuffer();
-        iconType = "image/jpeg";
-        iconExt = "jpg";
+      } catch {
+        try {
+          iconBuf = await sharp(input)
+            .rotate()
+            .resize({ width: 72, height: 72, fit: "cover", position: "attention" })
+            .jpeg({ quality: 70, mozjpeg: true })
+            .toBuffer();
+          iconType = "image/jpeg";
+          iconExt = "jpg";
+        } catch {
+          iconBuf = fullBuf;
+          iconType = fullType;
+          iconExt = fullExt;
+        }
       }
       const icon = await storeMediaObject({
         key: `uploads/${listingId}/photo-${i + 1}-icon.${iconExt}`,
