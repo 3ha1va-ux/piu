@@ -16,11 +16,24 @@ export async function generateMetadata({
   const listing = await getListingById(decodeURIComponent(id));
   if (!listing) return { title: "განცხადება — piu.ge" };
 
-  const title = `${listing.name} · ${listing.place} — piu.ge`;
+  const toneLabel =
+    listing.tone === "lost"
+      ? "🚨 დაიკარგა!"
+      : listing.tone === "found"
+      ? "🎉 ნაპოვნია!"
+      : "🏡 ჩუქდება!";
+  const rewardLabel = listing.reward ? ` · 🎁 ჯილდო: ${listing.reward}` : "";
+  const title = `${toneLabel} ${listing.animal} "${listing.name || "უცნობი"}" · ${listing.place}${rewardLabel} — piu.ge`;
   const description =
     listing.description ||
-    `${markerCaption(listing.animal, listing.tone)} — ${listing.place}`;
-  const photo = listing.photoUrls?.[0] || listing.photoIconUrl;
+    `${markerCaption(listing.animal, listing.tone)} — ${listing.place}. დაეხმარეთ პატრონთან დაბრუნებაში!`;
+  const rawPhoto = listing.photoUrls?.[0] || listing.photoIconUrl;
+  const photoUrl = rawPhoto
+    ? rawPhoto.startsWith("http")
+      ? rawPhoto
+      : `https://piu.ge${rawPhoto}`
+    : "https://piu.ge/og-image.jpg";
+  const pageUrl = `https://piu.ge/gancxadeba/${encodeURIComponent(listing.id)}`;
 
   return {
     title,
@@ -28,13 +41,24 @@ export async function generateMetadata({
     openGraph: {
       title,
       description,
-      images: photo ? [{ url: photo, alt: listing.name }] : [],
+      url: pageUrl,
+      siteName: "piu.ge — დაკარგული ცხოველების პლატფორმა",
+      locale: "ka_GE",
+      type: "article",
+      images: [
+        {
+          url: photoUrl,
+          width: 1200,
+          height: 630,
+          alt: listing.name || listing.animal,
+        },
+      ],
     },
     twitter: {
       card: "summary_large_image",
       title,
       description,
-      images: photo ? [photo] : [],
+      images: [photoUrl],
     },
   };
 }

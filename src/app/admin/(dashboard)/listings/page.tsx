@@ -31,6 +31,7 @@ export default function AdminListingsPage() {
   const [sourceFilter, setSourceFilter] = useState("all");
   const [toneFilter, setToneFilter] = useState<string>("all");
   const [animalFilter, setAnimalFilter] = useState<string>("all");
+  const [sortFilter, setSortFilter] = useState<string>("newest");
   const [page, setPage] = useState(1);
   const [reloadKey, setReloadKey] = useState(0);
 
@@ -57,6 +58,7 @@ export default function AdminListingsPage() {
     if (sourceFilter !== "all") params.set("source", sourceFilter);
     if (toneFilter !== "all") params.set("tone", toneFilter);
     if (animalFilter !== "all") params.set("animal", animalFilter);
+    if (sortFilter) params.set("sort", sortFilter);
     if (searchQuery.trim()) params.set("q", searchQuery.trim());
 
     fetch(`/api/admin/listings?${params.toString()}`)
@@ -82,7 +84,7 @@ export default function AdminListingsPage() {
     return () => {
       ignore = true;
     };
-  }, [page, sourceFilter, toneFilter, animalFilter, searchQuery, reloadKey]);
+  }, [page, sourceFilter, toneFilter, animalFilter, sortFilter, searchQuery, reloadKey]);
 
   // Handle Edit
   const openEditModal = (item: EnrichedListing) => {
@@ -188,7 +190,7 @@ export default function AdminListingsPage() {
 
       {/* Filter and Search Bar */}
       <div className="bg-white rounded-2xl p-4 sm:p-5 border border-[var(--mist)]/70 shadow-xs space-y-4">
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
           {/* Search Input */}
           <div className="lg:col-span-1">
             <label className="block text-xs font-medium text-[var(--ink-soft)] mb-1">
@@ -277,6 +279,28 @@ export default function AdminListingsPage() {
               <option value="კატა">კატა</option>
             </select>
           </div>
+
+          {/* Sort Filter */}
+          <div>
+            <label className="block text-xs font-medium text-[var(--ink-soft)] mb-1">
+              სორტირება
+            </label>
+            <select
+              value={sortFilter}
+              onChange={(e) => {
+                setSortFilter(e.target.value);
+                setLoading(true);
+                setPage(1);
+              }}
+              className="w-full px-3 py-2 text-sm rounded-xl border border-[var(--mist)] focus:border-[var(--moss)] outline-none bg-white text-[var(--ink)] font-medium"
+            >
+              <option value="newest">🕒 უახლესი პირველად</option>
+              <option value="oldest">🕒 უძველესი პირველად</option>
+              <option value="views_desc">🔥 ყველაზე ნახვადი (ტოპი)</option>
+              <option value="views_asc">👁️ ნაკლებად ნახვადი</option>
+              <option value="reward">🎁 ჯილდოიანი</option>
+            </select>
+          </div>
         </div>
       </div>
 
@@ -302,6 +326,7 @@ export default function AdminListingsPage() {
                   <th className="py-3 px-4 font-medium">სურათი</th>
                   <th className="py-3 px-4 font-medium">სახელი / ჯიში</th>
                   <th className="py-3 px-4 font-medium">სტატუსი</th>
+                  <th className="py-3 px-4 font-medium text-center">👁️ ნახვები</th>
                   <th className="py-3 px-4 font-medium">წყარო</th>
                   <th className="py-3 px-4 font-medium">ლოკაცია</th>
                   <th className="py-3 px-4 font-medium">კონტაქტი</th>
@@ -352,6 +377,17 @@ export default function AdminListingsPage() {
                           className={`inline-block text-xs font-medium px-2 py-0.5 rounded-full ${meta.bg} ${meta.color}`}
                         >
                           {meta.label}
+                        </span>
+                      </td>
+
+                      {/* Views */}
+                      <td className="py-3 px-4 text-center">
+                        <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-[var(--paper)] text-xs font-semibold text-[var(--ink)] border border-[var(--mist)] font-mono">
+                          <svg className="w-3.5 h-3.5 text-[var(--moss)]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                          </svg>
+                          <span>{item.views ?? 0}</span>
                         </span>
                       </td>
 

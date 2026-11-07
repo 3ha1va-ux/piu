@@ -55,6 +55,7 @@ export type DbListingRow = {
   contact_social: string | null;
   user_id: string | null;
   status: string;
+  views?: number | null;
   created_at: string;
   updated_at: string;
 };
@@ -86,6 +87,8 @@ export function dbRowToPetListing(row: DbListingRow): PetListing {
     contactName: row.contact_name || undefined,
     contactSocial: row.contact_social || undefined,
     createdAt: row.created_at,
+    status: row.status || "active",
+    views: Number(row.views) || 0,
   };
 }
 
@@ -121,6 +124,7 @@ export function petListingToDbRow(
     contact_social: listing.contactSocial || null,
     user_id: userId || null,
     status,
+    views: listing.views ?? 0,
     created_at: listing.createdAt || new Date().toISOString(),
     updated_at: new Date().toISOString(),
   };

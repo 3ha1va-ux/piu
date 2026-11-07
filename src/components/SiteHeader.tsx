@@ -27,6 +27,8 @@ export default function SiteHeader() {
     { name: "რუკა", href: "/" },
     { name: "ძებნა", href: "/dzieba" },
     { name: "ისტორიები", href: "/istoriebi" },
+    { name: "რჩევები", href: "/rchevebi" },
+    { name: "წესები", href: "/wesebi" },
   ];
 
   return (
@@ -99,15 +101,17 @@ export default function SiteHeader() {
 
                   <div className="py-1">
                     <Link
-                      href="/chemi-gancxadebebi"
+                      href="/profile"
                       onClick={() => setDropdownOpen(false)}
                       className="flex items-center gap-2.5 px-3 py-2 rounded-xl hover:bg-[var(--paper)] text-[var(--ink)] transition text-xs font-medium"
                     >
                       <svg className="w-4 h-4 text-[var(--moss)]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
                       </svg>
-                      <span>ჩემი განცხადებები</span>
+                      <span>პროფილი / ჩემი განცხადებები</span>
                     </Link>
+
+                    <div className="border-t border-[var(--mist)]/60 my-1"></div>
 
                     <button
                       onClick={() => {
@@ -167,6 +171,22 @@ export default function SiteHeader() {
               {link.name}
             </Link>
           ))}
+          <div className="border-t border-[var(--mist)]/60 pt-2 space-y-1">
+            <Link
+              href="/wesebi"
+              onClick={() => setMobileMenuOpen(false)}
+              className="block px-3 py-1.5 text-xs text-[var(--ink-soft)] hover:text-[var(--ink)] font-medium"
+            >
+              🛡️ საიტის წესები & უსაფრთხოება
+            </Link>
+            <Link
+              href="/privacy"
+              onClick={() => setMobileMenuOpen(false)}
+              className="block px-3 py-1.5 text-xs text-[var(--ink-soft)] hover:text-[var(--ink)] font-medium"
+            >
+              🔒 კონფიდენციალურობა
+            </Link>
+          </div>
           <Link
             href="/gancxadeba"
             onClick={() => setMobileMenuOpen(false)}

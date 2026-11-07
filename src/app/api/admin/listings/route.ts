@@ -6,6 +6,7 @@ import {
   readUserListings,
   deleteUserListing,
   updateUserListing,
+  getListingViews,
 } from "@/lib/userListingsStore";
 
 export const runtime = "nodejs";
@@ -23,23 +24,30 @@ export async function GET(request: Request) {
   const q = (searchParams.get("q") || "").toLowerCase().trim();
   const tone = searchParams.get("tone") as ListingTone | null;
   const animal = searchParams.get("animal") as AnimalType | null;
+  const sort = searchParams.get("sort") || "newest"; // newest | oldest | views_desc | views_asc | reward
 
   const userItems = await readUserListings();
   const demoItems = petListings;
 
-  type EnrichedListing = PetListing & { isUserSubmitted: boolean };
+  type EnrichedListing = PetListing & { isUserSubmitted: boolean; views: number };
+
+  const enrich = (item: PetListing, isUserSubmitted: boolean): EnrichedListing => ({
+    ...item,
+    isUserSubmitted,
+    views: getListingViews(item.id) || item.views || 0,
+  });
 
   let combined: EnrichedListing[] = [];
 
   if (source === "user") {
-    combined = userItems.map((item) => ({ ...item, isUserSubmitted: true }));
+    combined = userItems.map((item) => enrich(item, true));
   } else if (source === "demo") {
-    combined = demoItems.map((item) => ({ ...item, isUserSubmitted: false }));
+    combined = demoItems.map((item) => enrich(item, false));
   } else {
     // User items first, then demo items
     combined = [
-      ...userItems.map((item) => ({ ...item, isUserSubmitted: true })),
-      ...demoItems.map((item) => ({ ...item, isUserSubmitted: false })),
+      ...userItems.map((item) => enrich(item, true)),
+      ...demoItems.map((item) => enrich(item, false)),
     ];
   }
 
@@ -59,6 +67,20 @@ export async function GET(request: Request) {
       const matchBreed = item.breed?.toLowerCase().includes(q);
       return matchName || matchPlace || matchId || matchPhone || matchBreed;
     });
+  }
+
+  // Sorting
+  if (sort === "views_desc") {
+    combined.sort((a, b) => (b.views || 0) - (a.views || 0));
+  } else if (sort === "views_asc") {
+    combined.sort((a, b) => (a.views || 0) - (b.views || 0));
+  } else if (sort === "oldest") {
+    combined.sort((a, b) => new Date(a.createdAt || 0).getTime() - new Date(b.createdAt || 0).getTime());
+  } else if (sort === "reward") {
+    combined.sort((a, b) => (b.reward ? 1 : 0) - (a.reward ? 1 : 0));
+  } else {
+    // Default newest
+    combined.sort((a, b) => new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime());
   }
 
   const total = combined.length;

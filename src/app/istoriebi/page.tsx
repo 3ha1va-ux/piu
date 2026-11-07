@@ -4,6 +4,8 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import SiteHeader from "@/components/SiteHeader";
+import SiteFooter from "@/components/SiteFooter";
+import { supabase, dbRowToPetListing, type DbListingRow } from "@/lib/supabase";
 import type { PetListing } from "@/data/listings-types";
 
 export default function HappyStoriesPage() {
@@ -11,14 +13,33 @@ export default function HappyStoriesPage() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    fetch("/api/listings/search?limit=20")
-      .then((res) => res.json())
-      .then((data) => {
-        // Show demo & resolved listings
-        setStories(data.results || []);
+    async function loadStories() {
+      try {
+        const { data, error } = await supabase
+          .from("listings")
+          .select("*")
+          .in("status", ["resolved", "adopted"])
+          .order("updated_at", { ascending: false })
+          .limit(30);
+
+        if (!error && Array.isArray(data) && data.length > 0) {
+          setStories((data as DbListingRow[]).map(dbRowToPetListing));
+          setLoading(false);
+          return;
+        }
+
+        // Fallback to demo listings if no user listings have been resolved yet
+        const res = await fetch("/api/listings/search?limit=12");
+        const json = await res.json();
+        setStories(json.results || []);
+      } catch {
+        // Fallback
+      } finally {
         setLoading(false);
-      })
-      .catch(() => setLoading(false));
+      }
+    }
+
+    loadStories();
   }, []);
 
   return (
@@ -62,7 +83,12 @@ export default function HappyStoriesPage() {
                 "იპოვა ახალი სახლი 🏡",
                 "შეფარებულია & უსაფრთხოდ 🐾",
               ];
-              const badge = badges[idx % badges.length];
+              const badge =
+                item.status === "resolved"
+                  ? "დაუბრუნდა პატრონს 🎉"
+                  : item.status === "adopted"
+                  ? "იპოვა ახალი სახლი 🏡"
+                  : badges[idx % badges.length];
 
               return (
                 <div
@@ -125,14 +151,16 @@ export default function HappyStoriesPage() {
           </p>
           <div className="pt-2">
             <Link
-              href="/chemi-gancxadebebi"
+              href="/profile"
               className="inline-flex py-3 px-6 rounded-xl bg-[var(--moss)] hover:bg-[var(--leaf)] text-white text-xs sm:text-sm font-semibold transition shadow-xs"
             >
-              პირად კაბინეტში გადასვლა
+              პროფილში გადასვლა
             </Link>
           </div>
         </div>
       </main>
+
+      <SiteFooter />
     </div>
   );
 }

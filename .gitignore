@@ -41,6 +41,6 @@ yarn-error.log*
 next-env.d.ts
 
 # user-submitted listings & uploads
-/data/user-listings.json
+/data/*.json
 /public/uploads/*
 !/public/uploads/.gitkeep

@@ -14,6 +14,7 @@ import {
   saveListingPhotos,
   saveListingVideo,
 } from "@/lib/userListingsStore";
+import { supabaseAdmin } from "@/lib/supabase";
 
 export const runtime = "nodejs";
 
@@ -106,6 +107,33 @@ export async function POST(request: Request) {
     const chipRaw = String(form.get("hasChip") ?? "").trim();
     const lat = Number(form.get("lat"));
     const lng = Number(form.get("lng"));
+    const userId = String(form.get("userId") ?? "").trim();
+
+    if (!userId) {
+      return NextResponse.json(
+        { error: "განცხადების განსათავსებლად საჭიროა ავტორიზაცია." },
+        { status: 401 },
+      );
+    }
+
+    // Anti-Spam Rate Limit: max 3 listings per 24 hours per user
+    try {
+      const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+      const { count } = await supabaseAdmin
+        .from("listings")
+        .select("id", { count: "exact", head: true })
+        .eq("user_id", userId)
+        .gte("created_at", oneDayAgo);
+
+      if (count !== null && count >= 3) {
+        return NextResponse.json(
+          { error: "დღიური ლიმიტი ამოიწურა (მაქსიმუმ 3 განცხადება 24 საათში)." },
+          { status: 429 },
+        );
+      }
+    } catch (limitErr) {
+      console.warn("Rate limit check warning:", limitErr);
+    }
 
     if (!isTone(toneRaw)) {
       return NextResponse.json({ error: "აირჩიე სტატუსი" }, { status: 400 });
@@ -222,6 +250,7 @@ export async function POST(request: Request) {
       savedPhotos,
       listingId,
       videoUrl,
+      userId,
     );
 
     return NextResponse.json({ listing }, { status: 201 });

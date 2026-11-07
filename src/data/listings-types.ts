@@ -34,6 +34,7 @@ export type PetListing = {
   contactSocial?: string;
   createdAt?: string;
   status?: string;
+  views?: number;
 };
 
 export type CreateListingPayload = {

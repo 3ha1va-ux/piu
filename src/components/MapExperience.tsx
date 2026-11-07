@@ -247,6 +247,9 @@ export default function MapExperience() {
   const [pinnedListing, setPinnedListing] = useState<PetListing | null>(null);
   const [panToPinned, setPanToPinned] = useState(false);
   const [filtersOpen, setFiltersOpen] = useState(false);
+  const [desktopMenuOpen, setDesktopMenuOpen] = useState(false);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const desktopMenuRef = useRef<HTMLDivElement>(null);
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [focusReady, setFocusReady] = useState(false);
   const [items, setItems] = useState<PetListing[]>([]);
@@ -491,13 +494,28 @@ export default function MapExperience() {
   }, []);
 
   useEffect(() => {
-    if (!filtersOpen) return;
+    if (!filtersOpen && !mobileMenuOpen) return;
     const prev = document.body.style.overflow;
     document.body.style.overflow = "hidden";
     return () => {
       document.body.style.overflow = prev;
     };
-  }, [filtersOpen]);
+  }, [filtersOpen, mobileMenuOpen]);
+
+  useEffect(() => {
+    function handleClickOutside(e: MouseEvent) {
+      if (
+        desktopMenuRef.current &&
+        !desktopMenuRef.current.contains(e.target as Node)
+      ) {
+        setDesktopMenuOpen(false);
+      }
+    }
+    if (desktopMenuOpen) {
+      document.addEventListener("mousedown", handleClickOutside);
+      return () => document.removeEventListener("mousedown", handleClickOutside);
+    }
+  }, [desktopMenuOpen]);
 
   function selectListing(listing: PetListing) {
     applyFocusListing(listing);
@@ -556,11 +574,14 @@ export default function MapExperience() {
           <div className="pointer-events-auto flex items-start gap-2 md:justify-end md:gap-3">
             <button
               type="button"
-              onClick={resetToHome}
-              className="inline-flex h-[42px] shrink-0 items-center rounded-2xl border border-moss/10 bg-white/95 px-3.5 font-[family-name:var(--font-display)] text-base font-semibold tracking-tight text-ink shadow-[0_8px_24px_rgba(20,32,28,0.12)] backdrop-blur-md transition hover:bg-white md:hidden"
-              aria-label="piu.ge — მთავარ გვერდზე დაბრუნება"
+              onClick={() => setMobileMenuOpen(true)}
+              className="inline-flex h-[42px] shrink-0 items-center gap-1.5 rounded-2xl border border-moss/10 bg-white/95 px-3 font-[family-name:var(--font-display)] text-base font-semibold tracking-tight text-ink shadow-[0_8px_24px_rgba(20,32,28,0.12)] backdrop-blur-md transition hover:bg-white md:hidden"
+              aria-label="მენიუს გახსნა"
             >
-              piu.ge
+              <svg className="w-4 h-4 text-moss" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.2} d="M4 6h16M4 12h16M4 18h16" />
+              </svg>
+              <span>piu.ge</span>
             </button>
             <div className="min-w-0 flex-1 md:flex-none">
               <SearchConsole
@@ -569,22 +590,32 @@ export default function MapExperience() {
                 onSelectPlace={selectPlace}
               />
             </div>
+
+            <Link
+              href="/rchevebi"
+              className="hidden h-[42px] shrink-0 items-center gap-1.5 rounded-xl border border-moss/10 bg-white/95 px-3.5 text-xs font-semibold text-ink shadow-[0_8px_24px_rgba(20,32,28,0.12)] backdrop-blur-md transition hover:bg-white md:inline-flex"
+            >
+              <span>💡</span>
+              <span>რჩევები</span>
+            </Link>
+
             <Link
               href="/gancxadeba"
               className="hidden h-[42px] shrink-0 items-center rounded-xl bg-moss px-4 text-sm font-semibold text-white shadow-[0_8px_28px_rgba(31,74,58,0.28)] transition hover:bg-leaf md:inline-flex"
             >
               დამატება
             </Link>
+
             {user ? (
               <Link
-                href="/chemi-gancxadebebi"
+                href="/profile"
                 className="hidden h-[42px] shrink-0 items-center gap-2 rounded-xl border border-moss/10 bg-white/95 px-3.5 text-xs font-semibold text-ink shadow-[0_8px_24px_rgba(20,32,28,0.12)] backdrop-blur-md transition hover:bg-white md:inline-flex"
-                title="ჩემი კაბინეტი"
+                title="ჩემი პროფილი"
               >
                 <div className="w-5 h-5 rounded-full bg-moss text-white flex items-center justify-center font-bold text-[10px] uppercase">
                   {user.name ? user.name[0] : user.email[0]}
                 </div>
-                <span className="max-w-[100px] truncate">{user.name || "კაბინეტი"}</span>
+                <span className="max-w-[100px] truncate">{user.name || "პროფილი"}</span>
               </Link>
             ) : (
               <button
@@ -598,6 +629,68 @@ export default function MapExperience() {
                 <span>შესვლა</span>
               </button>
             )}
+
+            {/* Desktop More Menu Dropdown */}
+            <div className="relative hidden md:block" ref={desktopMenuRef}>
+              <button
+                type="button"
+                onClick={() => setDesktopMenuOpen((v) => !v)}
+                className="h-[42px] w-[42px] flex items-center justify-center rounded-xl border border-moss/10 bg-white/95 text-ink shadow-[0_8px_24px_rgba(20,32,28,0.12)] backdrop-blur-md transition hover:bg-white"
+                aria-label="დამატებითი მენიუ"
+                title="მენიუ"
+              >
+                <svg className="w-5 h-5 text-ink-soft" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+                </svg>
+              </button>
+
+              {desktopMenuOpen && (
+                <div className="absolute right-0 mt-2 w-60 rounded-2xl bg-white p-2 shadow-2xl border border-[var(--mist)] text-xs font-medium z-50 animate-in fade-in duration-100 space-y-1">
+                  <Link
+                    href="/rchevebi"
+                    onClick={() => setDesktopMenuOpen(false)}
+                    className="flex items-center gap-2.5 px-3 py-2 rounded-xl hover:bg-[var(--paper)] text-[var(--ink)] transition"
+                  >
+                    <span>💡</span>
+                    <span>რჩევები & გზამკვლევი</span>
+                  </Link>
+                  <Link
+                    href="/istoriebi"
+                    onClick={() => setDesktopMenuOpen(false)}
+                    className="flex items-center gap-2.5 px-3 py-2 rounded-xl hover:bg-[var(--paper)] text-[var(--ink)] transition"
+                  >
+                    <span>📖</span>
+                    <span>ბედნიერი ისტორიები</span>
+                  </Link>
+                  <Link
+                    href="/profile"
+                    onClick={() => setDesktopMenuOpen(false)}
+                    className="flex items-center gap-2.5 px-3 py-2 rounded-xl hover:bg-[var(--paper)] text-[var(--ink)] transition"
+                  >
+                    <span>👤</span>
+                    <span>ჩემი პროფილი & განცხადებები</span>
+                  </Link>
+                  <div className="border-t border-[var(--mist)]/70 my-1 pt-1">
+                    <Link
+                      href="/wesebi"
+                      onClick={() => setDesktopMenuOpen(false)}
+                      className="flex items-center gap-2.5 px-3 py-2 rounded-xl hover:bg-[var(--paper)] text-[var(--ink-soft)] hover:text-[var(--ink)] transition"
+                    >
+                      <span>🛡️</span>
+                      <span>საიტის წესები</span>
+                    </Link>
+                    <Link
+                      href="/privacy"
+                      onClick={() => setDesktopMenuOpen(false)}
+                      className="flex items-center gap-2.5 px-3 py-2 rounded-xl hover:bg-[var(--paper)] text-[var(--ink-soft)] hover:text-[var(--ink)] transition"
+                    >
+                      <span>🔒</span>
+                      <span>კონფიდენციალურობა</span>
+                    </Link>
+                  </div>
+                </div>
+              )}
+            </div>
           </div>
         </header>
 
@@ -651,6 +744,16 @@ export default function MapExperience() {
                 else handleSelect(id);
               }}
             />
+          </div>
+
+          <div className="shrink-0 border-t border-moss/10 px-4 py-2.5 text-[11px] text-ink-soft bg-paper/40 flex items-center justify-between">
+            <Link href="/rchevebi" className="hover:text-moss transition">💡 რჩევები</Link>
+            <span>•</span>
+            <Link href="/istoriebi" className="hover:text-moss transition">📖 ისტორიები</Link>
+            <span>•</span>
+            <Link href="/wesebi" className="hover:text-moss transition">🛡️ წესები</Link>
+            <span>•</span>
+            <Link href="/privacy" className="hover:text-moss transition">🔒 პოლიტიკა</Link>
           </div>
         </aside>
 
@@ -769,6 +872,118 @@ export default function MapExperience() {
           </div>
         ) : null}
 
+        {/* Mobile Full Navigation Sheet */}
+        {mobileMenuOpen && (
+          <div className="pointer-events-auto fixed inset-0 z-[100] flex items-end justify-center md:hidden">
+            {/* Backdrop */}
+            <button
+              type="button"
+              className="absolute inset-0 bg-black/60 backdrop-blur-xs transition-opacity"
+              aria-label="მენიუს დახურვა"
+              onClick={() => setMobileMenuOpen(false)}
+            />
+
+            {/* Sheet Content */}
+            <div
+              className="relative z-10 max-h-[85vh] w-full rounded-t-3xl bg-white shadow-2xl overflow-hidden flex flex-col animate-in slide-in-from-bottom duration-200"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="flex justify-center pt-3 pb-1">
+                <span className="h-1 w-10 rounded-full bg-moss/20" />
+              </div>
+              <div className="flex items-center justify-between px-5 pb-3 pt-2 border-b border-[var(--mist)]/70">
+                <div className="flex items-center gap-2">
+                  <span className="font-[family-name:var(--font-display)] text-lg font-bold text-ink">piu.ge</span>
+                  <span className="text-[11px] font-semibold text-moss bg-moss/10 px-2 py-0.5 rounded-full">მენიუ</span>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setMobileMenuOpen(false)}
+                  className="rounded-full bg-paper p-2 text-ink-soft hover:bg-mist transition"
+                  aria-label="დახურვა"
+                >
+                  <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              </div>
+
+              <div className="overflow-y-auto p-4 space-y-2 pb-[calc(1.5rem+env(safe-area-inset-bottom))]">
+                <Link
+                  href="/rchevebi"
+                  onClick={() => setMobileMenuOpen(false)}
+                  className="flex items-center gap-3.5 p-3.5 rounded-2xl bg-paper/60 hover:bg-paper transition border border-mist/40 active:scale-[0.99]"
+                >
+                  <span className="text-2xl">💡</span>
+                  <div>
+                    <p className="font-bold text-sm text-ink">რჩევები & გზამკვლევი</p>
+                    <p className="text-xs text-ink-soft">მოქმედების გეგმა დაკარგვის ან პოვნისას</p>
+                  </div>
+                </Link>
+
+                <Link
+                  href="/istoriebi"
+                  onClick={() => setMobileMenuOpen(false)}
+                  className="flex items-center gap-3.5 p-3.5 rounded-2xl bg-paper/60 hover:bg-paper transition border border-mist/40 active:scale-[0.99]"
+                >
+                  <span className="text-2xl">📖</span>
+                  <div>
+                    <p className="font-bold text-sm text-ink">ბედნიერი ისტორიები</p>
+                    <p className="text-xs text-ink-soft">პატრონთან დაბრუნებული ცხოველები</p>
+                  </div>
+                </Link>
+
+                <Link
+                  href="/profile"
+                  onClick={() => setMobileMenuOpen(false)}
+                  className="flex items-center gap-3.5 p-3.5 rounded-2xl bg-paper/60 hover:bg-paper transition border border-mist/40 active:scale-[0.99]"
+                >
+                  <span className="text-2xl">👤</span>
+                  <div>
+                    <p className="font-bold text-sm text-ink">ჩემი პროფილი & განცხადებები</p>
+                    <p className="text-xs text-ink-soft">განცხადებების მართვა, ვადის განახლება</p>
+                  </div>
+                </Link>
+
+                <Link
+                  href="/wesebi"
+                  onClick={() => setMobileMenuOpen(false)}
+                  className="flex items-center gap-3.5 p-3.5 rounded-2xl bg-paper/60 hover:bg-paper transition border border-mist/40 active:scale-[0.99]"
+                >
+                  <span className="text-2xl">🛡️</span>
+                  <div>
+                    <p className="font-bold text-sm text-ink">საიტის წესები & უსაფრთხოება</p>
+                    <p className="text-xs text-ink-soft">განთავსების პირობები და თაღლითობის პრევენცია</p>
+                  </div>
+                </Link>
+
+                <Link
+                  href="/privacy"
+                  onClick={() => setMobileMenuOpen(false)}
+                  className="flex items-center gap-3.5 p-3.5 rounded-2xl bg-paper/60 hover:bg-paper transition border border-mist/40 active:scale-[0.99]"
+                >
+                  <span className="text-2xl">🔒</span>
+                  <div>
+                    <p className="font-bold text-sm text-ink">კონფიდენციალურობა</p>
+                    <p className="text-xs text-ink-soft">პერსონალურ მონაცემთა დაცვა</p>
+                  </div>
+                </Link>
+
+                <div className="pt-2 border-t border-mist/70">
+                  <Link
+                    href="/gancxadeba"
+                    onClick={() => setMobileMenuOpen(false)}
+                    className="w-full flex items-center justify-center gap-2 py-3.5 px-4 rounded-xl bg-moss text-white font-semibold text-sm shadow-md active:scale-[0.99]"
+                  >
+                    <span>+</span>
+                    <span>განცხადების დამატება</span>
+                  </Link>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Mobile bottom tab bar */}
         <nav
           className="ipove-mobile-tabbar pointer-events-auto absolute inset-x-0 bottom-0 z-30 md:hidden"
@@ -857,7 +1072,7 @@ export default function MapExperience() {
 
             {user ? (
               <Link
-                href="/chemi-gancxadebebi"
+                href="/profile"
                 className="flex min-w-0 flex-1 flex-col items-center gap-0.5 rounded-xl px-1 py-1.5 text-[11px] font-semibold text-ink-soft"
               >
                 <NavIcon>
@@ -865,7 +1080,7 @@ export default function MapExperience() {
                     {user.name ? user.name[0] : user.email[0]}
                   </div>
                 </NavIcon>
-                კაბინეტი
+                პროფილი
               </Link>
             ) : (
               <button

@@ -1,37 +1,119 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useUserAuth } from "@/lib/userAuthContext";
 
 export default function AuthModal() {
-  const { isAuthModalOpen, closeAuthModal, loginWithGoogle, loginWithEmail } = useUserAuth();
+  const {
+    isAuthModalOpen,
+    closeAuthModal,
+    sendEmailOtp,
+    verifyEmailOtp,
+    loginWithGoogle,
+  } = useUserAuth();
+
+  const [step, setStep] = useState<"email" | "otp">("email");
   const [email, setEmail] = useState("");
+  const [otpCode, setOtpCode] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
+  const [countdown, setCountdown] = useState(0);
+
+  // Reset state whenever modal is opened / closed
+  useEffect(() => {
+    if (!isAuthModalOpen) {
+      setStep("email");
+      setEmail("");
+      setOtpCode("");
+      setErrorMessage(null);
+      setSuccessMessage(null);
+    }
+  }, [isAuthModalOpen]);
+
+  // Resend cooldown timer
+  useEffect(() => {
+    if (countdown <= 0) return;
+    const timer = setInterval(() => {
+      setCountdown((prev) => (prev > 0 ? prev - 1 : 0));
+    }, 1000);
+    return () => clearInterval(timer);
+  }, [countdown]);
 
   if (!isAuthModalOpen) return null;
 
-  const handleEmailSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!email.trim() || !email.includes("@")) return;
+  const handleGoogleClick = async () => {
     setIsSubmitting(true);
-    try {
-      await loginWithEmail(email.trim());
-    } finally {
-      setIsSubmitting(false);
+    setErrorMessage(null);
+    const res = await loginWithGoogle();
+    setIsSubmitting(false);
+    if (!res.ok && res.error) {
+      setErrorMessage(res.error);
     }
   };
 
-  const handleGoogleClick = async () => {
+  const handleSendEmail = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const cleanEmail = email.trim().toLowerCase();
+    if (!cleanEmail || !cleanEmail.includes("@")) {
+      setErrorMessage("გთხოვთ მიუთითოთ სწორი ელფოსტის მისამართი.");
+      return;
+    }
+
     setIsSubmitting(true);
-    try {
-      await loginWithGoogle();
-    } finally {
-      setIsSubmitting(false);
+    setErrorMessage(null);
+    setSuccessMessage(null);
+
+    const res = await sendEmailOtp(cleanEmail);
+    setIsSubmitting(false);
+
+    if (res.ok) {
+      setStep("otp");
+      setCountdown(60);
+      setSuccessMessage(`შესვლის ბმული / კოდი გაიგზავნა: ${cleanEmail}`);
+    } else {
+      setErrorMessage(res.error || "მეილის გაგზავნა ვერ მოხერხდა. სცადეთ მოგვიანებით.");
+    }
+  };
+
+  const handleVerifyOtp = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const cleanCode = otpCode.trim();
+    if (!cleanCode || cleanCode.length < 6) {
+      setErrorMessage("გთხოვთ შეიყვანოთ 6-ნიშნა კოდი.");
+      return;
+    }
+
+    setIsSubmitting(true);
+    setErrorMessage(null);
+
+    const res = await verifyEmailOtp(email, cleanCode);
+    setIsSubmitting(false);
+
+    if (res.ok) {
+      setSuccessMessage("ავტორიზაცია წარმატებით დასრულდა!");
+    } else {
+      setErrorMessage(res.error || "კოდი არასწორია ან ვადა გაუვიდა.");
+    }
+  };
+
+  const handleResend = async () => {
+    if (countdown > 0 || isSubmitting) return;
+    setIsSubmitting(true);
+    setErrorMessage(null);
+    const res = await sendEmailOtp(email.trim());
+    setIsSubmitting(false);
+
+    if (res.ok) {
+      setCountdown(60);
+      setSuccessMessage("ახალი ბმული / კოდი გაიგზავნა თქვენს ელფოსტაზე.");
+    } else {
+      setErrorMessage(res.error || "ხელახლა გაგზავნა ვერ მოხერხდა.");
     }
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/45 backdrop-blur-xs animate-in fade-in duration-150">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-xs animate-in fade-in duration-150">
       <div
         className="relative w-full max-w-md bg-white rounded-3xl p-6 sm:p-8 shadow-2xl border border-[var(--mist)] text-[var(--ink)]"
         onClick={(e) => e.stopPropagation()}
@@ -55,74 +137,164 @@ export default function AuthModal() {
             </svg>
           </div>
           <h2 className="text-2xl font-bold font-display text-[var(--ink)] tracking-tight">
-            შესვლა piu.ge-ზე
+            {step === "email" ? "შესვლა piu.ge-ზე" : "ერთჯერადი კოდი"}
           </h2>
           <p className="text-xs sm:text-sm text-[var(--ink-soft)] mt-1.5 leading-relaxed">
-            განცხადების სამართავად და სპამისგან თავის დასაცავად გთხოვთ გაიაროთ ავტორიზაცია
+            {step === "email"
+              ? "აირჩიეთ სასურველი მეთოდი სწრაფი და უსაფრთხო ავტორიზაციისთვის"
+              : `გამოგზავნილია მეილზე: ${email}. შეგიძლიათ გადახვიდეთ მეილის ბმულზე ან ჩაწეროთ 6-ნიშნა კოდი.`}
           </p>
         </div>
 
-        {/* Google 1-Click Login */}
-        <div className="space-y-4">
-          <button
-            onClick={handleGoogleClick}
-            disabled={isSubmitting}
-            type="button"
-            className="w-full flex items-center justify-center gap-3 py-3 px-4 rounded-xl border border-[var(--mist)] hover:bg-[var(--paper)] font-medium text-sm transition shadow-xs disabled:opacity-50"
-          >
-            <svg className="w-5 h-5" viewBox="0 0 24 24">
-              <path
-                fill="#4285F4"
-                d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
-              />
-              <path
-                fill="#34A853"
-                d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"
-              />
-              <path
-                fill="#FBBC05"
-                d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z"
-              />
-              <path
-                fill="#EA4335"
-                d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"
-              />
+        {/* Error message */}
+        {errorMessage && (
+          <div className="mb-4 p-3 rounded-xl bg-amber-50 border border-amber-200 text-amber-900 text-xs sm:text-sm leading-relaxed flex items-start gap-2">
+            <svg className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
             </svg>
-            <span>Google-ით შესვლა</span>
-          </button>
-
-          <div className="relative flex py-2 items-center">
-            <div className="flex-grow border-t border-[var(--mist)]"></div>
-            <span className="flex-shrink mx-3 text-xs text-[var(--ink-soft)] font-medium">ან ელფოსტით</span>
-            <div className="flex-grow border-t border-[var(--mist)]"></div>
+            <span>{errorMessage}</span>
           </div>
+        )}
 
-          {/* Email Login Form */}
-          <form onSubmit={handleEmailSubmit} className="space-y-3">
+        {/* Success message */}
+        {successMessage && !errorMessage && (
+          <div className="mb-4 p-3 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs sm:text-sm leading-relaxed flex items-start gap-2">
+            <svg className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+            </svg>
+            <span>{successMessage}</span>
+          </div>
+        )}
+
+        {/* STEP 1: Google 1-Click + Email */}
+        {step === "email" && (
+          <div className="space-y-4">
+            {/* Primary Google 1-Click Login */}
+            <button
+              onClick={handleGoogleClick}
+              disabled={isSubmitting}
+              type="button"
+              className="w-full flex items-center justify-center gap-3 py-3 px-4 rounded-xl border-2 border-[var(--mist)] hover:border-[var(--moss)]/40 hover:bg-[var(--paper)] font-semibold text-sm transition shadow-sm disabled:opacity-50"
+            >
+              <svg className="w-5 h-5 shrink-0" viewBox="0 0 24 24">
+                <path
+                  fill="#4285F4"
+                  d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
+                />
+                <path
+                  fill="#34A853"
+                  d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"
+                />
+                <path
+                  fill="#FBBC05"
+                  d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z"
+                />
+                <path
+                  fill="#EA4335"
+                  d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"
+                />
+              </svg>
+              <span>Google-ით შესვლა (1-Click)</span>
+            </button>
+
+            <div className="relative flex py-1 items-center">
+              <div className="flex-grow border-t border-[var(--mist)]"></div>
+              <span className="flex-shrink mx-3 text-xs text-[var(--ink-soft)] font-medium">ან ელფოსტის ბმულით</span>
+              <div className="flex-grow border-t border-[var(--mist)]"></div>
+            </div>
+
+            {/* Email Form */}
+            <form onSubmit={handleSendEmail} className="space-y-3">
+              <div>
+                <label htmlFor="auth-email" className="block text-xs font-semibold text-[var(--ink)] mb-1.5">
+                  თქვენი ელფოსტა
+                </label>
+                <div className="relative">
+                  <span className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-[var(--ink-soft)]">
+                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 12a4 4 0 10-8 0 4 4 0 008 0zm0 0v1.5a2.5 2.5 0 005 0V12a9 9 0 10-9 9m4.5-1.206a8.959 8.959 0 01-4.5 1.206" />
+                    </svg>
+                  </span>
+                  <input
+                    id="auth-email"
+                    type="email"
+                    required
+                    placeholder="saxeli@gmail.com"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    className="w-full pl-10 pr-4 py-2.5 text-sm rounded-xl border border-[var(--mist)] focus:border-[var(--moss)] focus:ring-2 focus:ring-[var(--moss)]/20 outline-none transition bg-white"
+                  />
+                </div>
+              </div>
+
+              <button
+                type="submit"
+                disabled={isSubmitting || !email.trim()}
+                className="w-full py-2.5 px-4 rounded-xl bg-[var(--moss)] hover:bg-[var(--leaf)] text-white text-sm font-semibold transition shadow-md shadow-[var(--moss)]/15 disabled:opacity-50"
+              >
+                {isSubmitting ? "იგზავნება..." : "შესვლის ბმულის მიღება"}
+              </button>
+            </form>
+          </div>
+        )}
+
+        {/* STEP 2: Enter 6-digit OTP (Optional if user prefers code over clicking email link) */}
+        {step === "otp" && (
+          <form onSubmit={handleVerifyOtp} className="space-y-4">
+            <div className="p-3.5 rounded-2xl bg-[var(--paper)] text-xs text-[var(--ink-soft)] leading-relaxed text-center">
+              💡 შეამოწმეთ თქვენი ელფოსტა: შეგიძლიათ <strong>პირდაპირ დააჭიროთ მეილში მოსულ ბმულს</strong> და საიტი წამში გაიხსნება, ან შეიყვანოთ კოდი:
+            </div>
+
             <div>
-              <label htmlFor="auth-email" className="block text-xs font-medium text-[var(--ink-soft)] mb-1">
-                თქვენი ელფოსტა
+              <label htmlFor="auth-otp" className="block text-xs font-semibold text-[var(--ink)] mb-1.5 text-center">
+                6-ნიშნა კოდი
               </label>
               <input
-                id="auth-email"
-                type="email"
-                required
-                placeholder="saxeli@gmail.com"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                className="w-full px-4 py-2.5 text-sm rounded-xl border border-[var(--mist)] focus:border-[var(--moss)] outline-none transition bg-white"
+                id="auth-otp"
+                type="text"
+                inputMode="numeric"
+                autoComplete="one-time-code"
+                maxLength={8}
+                autoFocus
+                placeholder="123456"
+                value={otpCode}
+                onChange={(e) => setOtpCode(e.target.value.replace(/\s+/g, ""))}
+                className="w-full tracking-[0.35em] text-center font-mono text-2xl font-bold py-3 px-4 rounded-xl border-2 border-[var(--moss)] focus:ring-2 focus:ring-[var(--moss)]/30 outline-none transition bg-white"
               />
             </div>
 
             <button
               type="submit"
-              disabled={isSubmitting}
-              className="w-full py-2.5 px-4 rounded-xl bg-[var(--moss)] hover:bg-[var(--leaf)] text-white text-sm font-medium transition shadow-sm disabled:opacity-50"
+              disabled={isSubmitting || otpCode.trim().length < 6}
+              className="w-full py-3 px-4 rounded-xl bg-[var(--moss)] hover:bg-[var(--leaf)] text-white text-sm font-semibold transition shadow-md shadow-[var(--moss)]/15 disabled:opacity-50"
             >
-              {isSubmitting ? "შესვლა..." : "გაგრძელება ელფოსტით"}
+              {isSubmitting ? "მოწმდება..." : "კოდით დადასტურება"}
             </button>
+
+            {/* Actions: Resend or Change Email */}
+            <div className="flex items-center justify-between text-xs pt-2">
+              <button
+                type="button"
+                onClick={() => {
+                  setStep("email");
+                  setErrorMessage(null);
+                }}
+                className="text-[var(--ink-soft)] hover:text-[var(--ink)] underline transition"
+              >
+                ← მეილის შეცვლა
+              </button>
+
+              <button
+                type="button"
+                disabled={countdown > 0 || isSubmitting}
+                onClick={handleResend}
+                className="text-[var(--moss)] hover:underline disabled:text-[var(--ink-soft)] disabled:no-underline transition font-semibold"
+              >
+                {countdown > 0 ? `ხელახლა გაგზავნა (${countdown}წმ)` : "ხელახლა გაგზავნა"}
+              </button>
+            </div>
           </form>
-        </div>
+        )}
 
         {/* Security / Anti-Spam Badge */}
         <div className="mt-6 pt-4 border-t border-[var(--mist)]/60 text-center">

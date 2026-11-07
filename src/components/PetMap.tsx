@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useClientReady, useLatestRef } from "@/lib/useClientReady";
 import {
   MapContainer,
@@ -198,6 +198,7 @@ function listingPopupHtml(item: PetListing): string {
       )
     ] ?? item.photoUrls?.[0];
   const detailHref = `/gancxadeba/${encodeURIComponent(item.id)}`;
+  const navUrl = `https://www.google.com/maps/dir/?api=1&destination=${item.lat},${item.lng}`;
 
   return [
     `<a class="ipove-popup" href="${detailHref}">`,
@@ -208,6 +209,10 @@ function listingPopupHtml(item: PetListing): string {
     `<p class="ipove-popup-cap" style="color:${toneColor(item.tone)}">${escapeHtml(visual.caption)}</p>`,
     `<p class="ipove-popup-name">${escapeHtml(item.name)}</p>`,
     `<p class="ipove-popup-place">${escapeHtml(item.place)}</p>`,
+    `<div class="ipove-popup-actions" style="margin-top:8px; display:flex; gap:6px;">`,
+    `<span style="flex:1; padding:5px 8px; font-size:11px; font-weight:600; text-align:center; border-radius:8px; background:var(--moss,#1f4a3a); color:#fff; display:block;">დეტალურად</span>`,
+    `<button type="button" class="ipove-popup-nav-btn" data-nav="${navUrl}" style="padding:5px 8px; font-size:11px; font-weight:600; text-align:center; border-radius:8px; background:#eff6ff; color:#1d4ed8; border:1px solid #bfdbfe; display:inline-flex; align-items:center; gap:3px; cursor:pointer;">🗺️ ნავიგაცია</button>`,
+    `</div>`,
     `</div>`,
     `</a>`,
   ].join("");
@@ -220,6 +225,18 @@ function wirePopupLink(popup: L.Popup) {
   container.dataset.wired = "1";
   L.DomEvent.disableClickPropagation(container);
   L.DomEvent.disableScrollPropagation(container);
+
+  const navBtn = container.querySelector<HTMLButtonElement>(".ipove-popup-nav-btn");
+  if (navBtn) {
+    navBtn.addEventListener("click", (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      const url = navBtn.dataset.nav;
+      if (url) {
+        window.open(url, "_blank", "noopener,noreferrer");
+      }
+    });
+  }
 }
 
 function ClusteredMarkers({
@@ -575,6 +592,22 @@ function FitGeorgiaOnBoot({ enabled }: { enabled: boolean }) {
   const doneRef = useRef(false);
 
   useEffect(() => {
+    map.invalidateSize();
+    const t1 = setTimeout(() => map.invalidateSize(), 200);
+    const t2 = setTimeout(() => map.invalidateSize(), 600);
+    const onResize = () => map.invalidateSize();
+    window.addEventListener("resize", onResize);
+    window.addEventListener("orientationchange", onResize);
+
+    return () => {
+      clearTimeout(t1);
+      clearTimeout(t2);
+      window.removeEventListener("resize", onResize);
+      window.removeEventListener("orientationchange", onResize);
+    };
+  }, [map]);
+
+  useEffect(() => {
     if (!enabled || doneRef.current) return;
 
     let cancelled = false;
@@ -628,6 +661,92 @@ function PlaceFlight({ target }: { target: PlaceTarget | null }) {
   }, [map, target]);
 
   return null;
+}
+
+function UserLocationControl() {
+  const map = useMap();
+  const [locating, setLocating] = useState(false);
+  const userMarkerRef = useRef<L.CircleMarker | null>(null);
+
+  const handleLocate = useCallback(
+    (e: React.MouseEvent) => {
+      e.preventDefault();
+      e.stopPropagation();
+
+      if (typeof window === "undefined" || !("geolocation" in navigator)) {
+        alert("თქვენს ბრაუზერს არ აქვს გეოლოკაციის მხარდაჭერა.");
+        return;
+      }
+
+      setLocating(true);
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          setLocating(false);
+          const { latitude, longitude } = position.coords;
+
+          if (userMarkerRef.current) {
+            map.removeLayer(userMarkerRef.current);
+          }
+
+          const marker = L.circleMarker([latitude, longitude], {
+            radius: 8,
+            color: "#ffffff",
+            weight: 2.5,
+            fillColor: "#2563eb",
+            fillOpacity: 1,
+          });
+
+          marker.bindTooltip("თქვენ აქ იმყოფებით", {
+            permanent: false,
+            direction: "top",
+          });
+
+          marker.addTo(map);
+          userMarkerRef.current = marker;
+
+          map.flyTo([latitude, longitude], Math.max(map.getZoom(), 15), {
+            duration: 0.9,
+          });
+        },
+        (error) => {
+          setLocating(false);
+          console.warn("Geolocation error:", error);
+          alert(
+            "ლოკაციის განსაზღვრა ვერ მოხერხდა. გთხოვთ, ბრაუზერში ჩართოთ ლოკაციის გაზიარების ნებართვა piu.ge-სთვის."
+          );
+        },
+        { enableHighAccuracy: true, timeout: 10000, maximumAge: 30000 }
+      );
+    },
+    [map]
+  );
+
+  return (
+    <div className="leaflet-bottom leaflet-right mb-20 mr-2.5 sm:mr-3 z-[400] pointer-events-auto">
+      <button
+        type="button"
+        onClick={handleLocate}
+        disabled={locating}
+        className="flex h-10 w-10 items-center justify-center rounded-xl border border-moss/15 bg-white/95 text-ink shadow-[0_4px_16px_rgba(20,32,28,0.15)] backdrop-blur-md transition hover:bg-paper active:scale-95 disabled:opacity-50"
+        title="ჩემი მდებარეობის პოვნა რუკაზე"
+        aria-label="ჩემი მდებარეობა"
+      >
+        {locating ? (
+          <div className="h-4 w-4 border-2 border-moss border-t-transparent rounded-full animate-spin" />
+        ) : (
+          <svg className="w-5 h-5 text-moss" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d="M12 2v2m0 16v2m10-10h-2M4 12H2m15.071-7.071l-1.414 1.414M8.343 17.657l-1.414 1.414m12.728 0l-1.414-1.414M8.343 6.343L6.929 4.929"
+            />
+            <circle cx="12" cy="12" r="3" stroke="currentColor" strokeWidth={2} fill="currentColor" fillOpacity={0.2} />
+          </svg>
+        )}
+      </button>
+    </div>
+  );
 }
 
 export default function PetMap({
@@ -690,6 +809,7 @@ export default function PetMap({
         attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
       />
       <ZoomControl position="bottomright" />
+      <UserLocationControl />
       <FitGeorgiaOnBoot enabled={boot.fitGeorgia} />
       <ViewportReporter onViewportChange={onViewportChange} />
       <PlaceFlight target={placeTarget} />

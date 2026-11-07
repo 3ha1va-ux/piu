@@ -13,17 +13,17 @@ export default function CreateListingPage() {
     <div className="min-h-full bg-[linear-gradient(165deg,#e8f1ec_0%,#eef4f0_45%,#dce9e2_100%)]">
       <SiteHeader />
 
-      <main className="mx-auto w-full max-w-5xl px-4 py-8 sm:px-6 pb-16 md:px-8">
-        <div className="mb-8 max-w-2xl">
-          <p className="text-xs sm:text-sm font-semibold uppercase tracking-[0.18em] text-[var(--lake)]">
-            ახალი განცხადება
-          </p>
-          <h1 className="mt-2 font-[family-name:var(--font-display)] text-2xl sm:text-3xl font-bold leading-tight text-[var(--ink)] md:text-4xl">
+      <main className="mx-auto w-full max-w-3xl px-4 py-8 sm:py-10 pb-20">
+        <div className="mb-8">
+          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-100/90 text-[var(--moss)] text-xs font-bold tracking-wide uppercase shadow-2xs">
+            <span>🐾</span>
+            <span>ახალი განცხადება</span>
+          </div>
+          <h1 className="mt-3 font-[family-name:var(--font-display)] text-2xl sm:text-3xl font-bold leading-tight text-[var(--ink)] md:text-4xl">
             დაამატე განცხადება რუკაზე
           </h1>
-          <p className="mt-2 text-xs sm:text-sm text-[var(--ink-soft)]">
-            მიუთითე სტატუსი, ფოტო, ადგილი და კონტაქტი — განცხადება გამოჩნდება
-            იმ წერტილზე, რომელსაც რუკაზე მონიშნავ.
+          <p className="mt-2 text-xs sm:text-sm text-[var(--ink-soft)] leading-relaxed">
+            მიუთითე სტატუსი, ფოტო, ადგილი და საკონტაქტო ნომერი — განცხადება მყისიერად გამოჩნდება რუკაზე.
           </p>
         </div>
 

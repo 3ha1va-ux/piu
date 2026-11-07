@@ -22,9 +22,7 @@ export default function PosterModal({ listing, onClose }: PosterModalProps) {
     listing.photoIconUrl ||
     (listing.animal === "ძაღლი" ? "/demo/dog-1.jpg" : "/demo/cat-1.jpg");
 
-  const currentUrl = typeof window !== "undefined"
-    ? `${window.location.origin}/gancxadeba/${listing.id}`
-    : `https://piu.ge/gancxadeba/${listing.id}`;
+  const currentUrl = `https://piu.ge/gancxadeba/${encodeURIComponent(listing.id)}`;
 
   const qrCodeUrl = `https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(
     currentUrl

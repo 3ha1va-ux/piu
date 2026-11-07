@@ -31,6 +31,7 @@ import {
 const DATA_DIR = path.join(process.cwd(), "data");
 const STORE_PATH = path.join(DATA_DIR, "user-listings.json");
 const STORE_TMP = path.join(DATA_DIR, "user-listings.json.tmp");
+const VIEWS_STORE_PATH = path.join(DATA_DIR, "listing-views.json");
 const R2_LISTINGS_KEY = "data/user-listings.json";
 
 function kindFromTone(tone: ListingTone): ListingKind {
@@ -192,6 +193,7 @@ export async function createUserListing(
   },
   id = newListingId(),
   videoUrl?: string,
+  userId?: string | null,
 ): Promise<PetListing> {
   const listing: PetListing = {
     id,
@@ -226,7 +228,7 @@ export async function createUserListing(
   return withWriteLock(async () => {
     // 1. Persist to Supabase Postgres
     try {
-      const dbRow = petListingToDbRow(listing);
+      const dbRow = petListingToDbRow(listing, userId);
       const { error } = await supabaseAdmin.from("listings").insert([dbRow]);
       if (error) {
         console.error("Supabase insert error:", error);
@@ -287,11 +289,91 @@ export async function updateUserListing(
 
     const all = await readUserListings();
     const index = all.findIndex((item) => item.id === id);
-    if (index === -1) return null;
+    if (index === -1) {
+      // If was previously resolved and is now reactivated, fetch from Supabase
+      if (updates.status === "active") {
+        const { data } = await supabaseAdmin
+          .from("listings")
+          .select("*")
+          .eq("id", id)
+          .single();
+        if (data) {
+          const reactivated = dbRowToPetListing(data as DbListingRow);
+          const next = [reactivated, ...all];
+          await persistListings(next);
+          return reactivated;
+        }
+      }
+      return null;
+    }
+
     const updated: PetListing = { ...all[index], ...updates };
-    const next = [...all];
-    next[index] = updated;
+    let next: PetListing[];
+    if (updates.status && updates.status !== "active") {
+      // Non-active listings (resolved/adopted) are excluded from the active map cache
+      next = all.filter((item) => item.id !== id);
+    } else {
+      next = [...all];
+      next[index] = updated;
+    }
+
     await persistListings(next);
     return updated;
   });
 }
+
+let inMemoryViews: Record<string, number> | null = null;
+
+function readViewsMap(): Record<string, number> {
+  if (inMemoryViews) return inMemoryViews;
+  try {
+    ensureDataDir();
+    if (existsSync(VIEWS_STORE_PATH)) {
+      const raw = readFileSync(VIEWS_STORE_PATH, "utf8");
+      inMemoryViews = JSON.parse(raw);
+      return inMemoryViews || {};
+    }
+  } catch {}
+  inMemoryViews = {};
+  return inMemoryViews;
+}
+
+function writeViewsMap(map: Record<string, number>) {
+  inMemoryViews = map;
+  try {
+    ensureDataDir();
+    writeFileSync(VIEWS_STORE_PATH, JSON.stringify(map, null, 2), "utf8");
+  } catch {}
+}
+
+export async function incrementListingViews(id: string): Promise<number> {
+  const map = readViewsMap();
+  const current = (map[id] || 0) + 1;
+  map[id] = current;
+  writeViewsMap(map);
+
+  // If it's a user listing in Supabase, update views column
+  if (id.startsWith("u-")) {
+    try {
+      await supabaseAdmin
+        .from("listings")
+        .update({ views: current })
+        .eq("id", id);
+    } catch {}
+
+    if (memoryCache) {
+      const idx = memoryCache.findIndex((item) => item.id === id);
+      if (idx !== -1) {
+        memoryCache[idx].views = current;
+      }
+    }
+  }
+
+  return current;
+}
+
+export function getListingViews(id: string): number {
+  const map = readViewsMap();
+  return map[id] || 0;
+}
+

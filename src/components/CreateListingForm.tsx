@@ -13,6 +13,7 @@ import dynamic from "next/dynamic";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import type { ListingTone } from "@/data/listings-types";
+import { useUserAuth } from "@/lib/userAuthContext";
 import { TONE_COLORS, TONE_LABELS } from "@/lib/markerStyles";
 import {
   emptyListingForm,
@@ -54,6 +55,7 @@ function eventDateLabel(tone: ListingTone | null): string {
 
 export default function CreateListingForm() {
   const router = useRouter();
+  const { user, openAuthModal, logout } = useUserAuth();
   const [step, setStep] = useState(1);
   const [form, setForm] = useState<ListingFormState>(() => emptyListingForm());
   const [error, setError] = useState<string | null>(null);
@@ -74,6 +76,27 @@ export default function CreateListingForm() {
   const placeQuery = form.place.trim();
   const visiblePlaceSuggestions =
     placeQuery.length >= 2 ? placeSuggestions : [];
+  const animalSectionRef = useRef<HTMLDivElement>(null);
+
+  function handleToneSelect(tone: ListingTone) {
+    if (form.tone === tone) {
+      // Toggle off / deselect
+      patch({ tone: null });
+      return;
+    }
+    patch({ tone });
+    setError(null);
+  }
+
+  function handleAnimalSelect(animal: (typeof ANIMAL_OPTIONS)[number]) {
+    if (form.animal === animal) {
+      // Toggle off / deselect
+      patch({ animal: null });
+      return;
+    }
+    patch({ animal });
+    setError(null);
+  }
 
   useEffect(() => {
     return () => {
@@ -209,11 +232,19 @@ export default function CreateListingForm() {
       return;
     }
 
+    if (!user) {
+      setError("განცხადების გამოსაქვეყნებლად და სპამისგან დასაცავად საჭიროა ავტორიზაცია.");
+      openAuthModal();
+      return;
+    }
+
     setSubmitting(true);
     setError(null);
 
     try {
       const body = new FormData();
+      body.set("userId", user.id);
+      body.set("userEmail", user.email);
       body.set("tone", form.tone);
       body.set("animal", form.animal);
       body.set("name", form.name.trim() || "უცნობი");
@@ -297,94 +328,220 @@ export default function CreateListingForm() {
     <form
       onSubmit={onSubmit}
       onKeyDown={onFormKeyDown}
-      className="mx-auto max-w-3xl"
+      className="w-full"
     >
-      <div className="mb-8 flex flex-wrap items-center gap-2">
+      {/* Modern Stepper Progress Bar */}
+      <div className="mb-6 grid grid-cols-4 gap-2 sm:gap-3">
         {FORM_STEPS.map((item) => {
           const active = item.id === step;
           const done = item.id < step;
           return (
-            <div key={item.id} className="flex items-center gap-2">
+            <div
+              key={item.id}
+              className={`flex items-center justify-center sm:justify-start gap-2 p-2.5 sm:px-3.5 sm:py-2.5 rounded-xl border text-xs sm:text-sm transition ${
+                active
+                  ? "bg-[var(--moss)] text-white border-[var(--moss)] shadow-xs font-semibold"
+                  : done
+                  ? "bg-emerald-50 text-emerald-800 border-emerald-200 font-medium"
+                  : "bg-white/80 text-[var(--ink-soft)] border-[var(--mist)] font-normal"
+              }`}
+            >
               <span
-                className={`inline-flex h-8 min-w-8 items-center justify-center rounded-full px-2 text-xs font-bold ${
+                className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-[11px] font-bold ${
                   active
-                    ? "bg-moss text-white"
+                    ? "bg-white text-[var(--moss)]"
                     : done
-                      ? "bg-mist text-moss"
-                      : "bg-white text-ink-soft"
+                    ? "bg-emerald-600 text-white"
+                    : "bg-[var(--mist)] text-[var(--ink-soft)]"
                 }`}
               >
-                {item.id}
+                {done ? "✓" : item.id}
               </span>
-              <span
-                className={`text-sm ${active ? "font-semibold text-ink" : "text-ink-soft"}`}
-              >
-                {item.title}
-              </span>
-              {item.id < 4 ? (
-                <span className="mx-1 hidden h-px w-6 bg-moss/20 sm:inline-block" />
-              ) : null}
+              <span className="hidden sm:inline truncate">{item.title}</span>
             </div>
           );
         })}
       </div>
 
-      <div className="rounded-2xl border border-moss/10 bg-white/90 p-6 shadow-[0_16px_48px_rgba(20,32,28,0.08)] md:p-8">
-        <p className="text-sm text-ink-soft">{FORM_STEPS[step - 1]?.hint}</p>
+      <div className="rounded-3xl border border-[var(--mist)] bg-white p-6 sm:p-8 shadow-xl">
+        <div className="border-b border-[var(--mist)]/70 pb-5 mb-7">
+          <p className="text-xs font-bold uppercase tracking-wider text-[var(--moss)]">
+            ნაბიჯი {step} / 4
+          </p>
+          <h2 className="text-xl sm:text-2xl font-bold text-[var(--ink)] mt-1 font-[family-name:var(--font-display)]">
+            {FORM_STEPS[step - 1]?.title}: {FORM_STEPS[step - 1]?.hint}
+          </h2>
+        </div>
 
         {step === 1 ? (
-          <div className="mt-6 space-y-8">
-            <fieldset>
-              <legend className="text-sm font-semibold text-ink">სტატუსი *</legend>
-              <div className="mt-3 grid gap-3 sm:grid-cols-3">
+          <div className="space-y-8">
+            {/* 1. Status Selection */}
+            <div role="group" aria-labelledby="status-heading">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h3 id="status-heading" className="text-sm sm:text-base font-bold text-[var(--ink)] flex items-center gap-2">
+                    <span className="flex h-5 w-5 items-center justify-center rounded-full bg-[var(--moss)]/15 text-[var(--moss)] text-xs font-bold">1</span>
+                    <span>განცხადების სტატუსი *</span>
+                  </h3>
+                  <p className="mt-1 text-xs text-[var(--ink-soft)]">
+                    რა შემთხვევაა? აირჩიეთ ერთ-ერთი
+                  </p>
+                </div>
+                {form.tone && (
+                  <span className="text-xs font-semibold text-emerald-800 bg-emerald-100/90 px-2.5 py-0.5 rounded-full flex items-center gap-1 animate-in fade-in">
+                    <span>✓</span>
+                    <span>{TONE_LABELS[form.tone]}</span>
+                  </span>
+                )}
+              </div>
+
+              <div className="mt-3.5 grid gap-3 sm:grid-cols-3">
                 {TONE_OPTIONS.map((tone) => {
                   const selected = form.tone === tone;
+                  const isLost = tone === "lost";
+                  const isFound = tone === "found";
+
+                  const meta = isLost
+                    ? {
+                        title: "დაკარგული",
+                        subtitle: "ვეძებ ჩემს ცხოველს",
+                        dot: "bg-red-500",
+                      }
+                    : isFound
+                    ? {
+                        title: "ნაპოვნი",
+                        subtitle: "ვიპოვე / შევიფარე",
+                        dot: "bg-emerald-500",
+                      }
+                    : {
+                        title: "ჩუქდება",
+                        subtitle: "ვეძებ ახალ პატრონს",
+                        dot: "bg-amber-500",
+                      };
+
                   return (
                     <button
                       key={tone}
                       type="button"
-                      onClick={() => patch({ tone })}
-                      className={`rounded-xl border px-4 py-4 text-left transition ${
+                      onClick={() => handleToneSelect(tone)}
+                      className={`group relative flex flex-col justify-between rounded-2xl border-2 p-4 text-left transition-all active:scale-[0.98] touch-manipulation cursor-pointer select-none ${
                         selected
-                          ? "border-moss bg-mist/60 shadow-sm"
-                          : "border-moss/15 bg-white hover:border-moss/30"
+                          ? "border-[var(--moss)] bg-emerald-50/70 shadow-sm ring-2 ring-[var(--moss)]/20"
+                          : "border-[var(--mist)] bg-white hover:border-[var(--moss)]/40 hover:bg-[var(--paper)]/50"
                       }`}
                     >
-                      <span
-                        className="inline-block h-2.5 w-2.5 rounded-full"
-                        style={{ backgroundColor: TONE_COLORS[tone].pin }}
-                      />
-                      <span className="mt-2 block font-semibold text-ink">
-                        {TONE_LABELS[tone]}
-                      </span>
+                      <div className="flex items-center justify-between w-full">
+                        <div className="flex items-center gap-2.5">
+                          <span className={`h-3 w-3 rounded-full shrink-0 shadow-xs ${meta.dot}`} />
+                          <span className="font-bold text-sm sm:text-base text-[var(--ink)]">
+                            {meta.title}
+                          </span>
+                        </div>
+                        <div
+                          className={`h-5 w-5 rounded-full flex items-center justify-center text-xs font-bold transition ${
+                            selected
+                              ? "bg-[var(--moss)] text-white shadow-xs"
+                              : "border border-[var(--mist)] bg-[var(--paper)] text-transparent group-hover:border-[var(--moss)]/30"
+                          }`}
+                        >
+                          ✓
+                        </div>
+                      </div>
+                      <p className="mt-2.5 text-xs text-[var(--ink-soft)] font-normal">
+                        {meta.subtitle}
+                      </p>
                     </button>
                   );
                 })}
               </div>
-            </fieldset>
+            </div>
 
-            <fieldset>
-              <legend className="text-sm font-semibold text-ink">სახეობა *</legend>
-              <div className="mt-3 grid gap-3 sm:grid-cols-2">
+            {/* Subtle Divider between Status and Animal */}
+            <div className="border-t border-[var(--mist)]/70"></div>
+
+            {/* 2. Animal Selection */}
+            <div
+              ref={animalSectionRef}
+              role="group"
+              aria-labelledby="animal-heading"
+              className={`rounded-2xl p-4 sm:p-5 border-2 transition-all duration-300 ${
+                form.tone && !form.animal
+                  ? "border-amber-400 bg-amber-50/70 ring-4 ring-amber-100/90 shadow-xs"
+                  : form.animal
+                  ? "border-emerald-200/80 bg-emerald-50/20"
+                  : "border-[var(--mist)]/40 bg-[var(--paper)]/25"
+              }`}
+            >
+              <div className="flex items-center justify-between">
+                <div>
+                  <h3 id="animal-heading" className="text-sm sm:text-base font-bold text-[var(--ink)] flex items-center gap-2">
+                    <span
+                      className={`flex h-5 w-5 items-center justify-center rounded-full text-xs font-bold transition ${
+                        form.animal
+                          ? "bg-[var(--moss)] text-white"
+                          : form.tone
+                          ? "bg-amber-400 text-amber-950 animate-pulse"
+                          : "bg-[var(--moss)]/15 text-[var(--moss)]"
+                      }`}
+                    >
+                      2
+                    </span>
+                    <span>ცხოველის სახეობა *</span>
+                  </h3>
+                  <p className="mt-1 text-xs text-[var(--ink-soft)]">
+                    ვის ეხება თქვენი განცხადება?
+                  </p>
+                </div>
+                {form.animal && (
+                  <span className="text-xs font-semibold text-emerald-800 bg-emerald-100/90 px-2.5 py-0.5 rounded-full flex items-center gap-1 animate-in fade-in">
+                    <span>✓</span>
+                    <span>{form.animal}</span>
+                  </span>
+                )}
+              </div>
+
+              <div className="mt-3.5 grid grid-cols-2 gap-3 sm:gap-4">
                 {ANIMAL_OPTIONS.map((animal) => {
                   const selected = form.animal === animal;
+                  const isDog = animal === "ძაღლი";
                   return (
                     <button
                       key={animal}
                       type="button"
-                      onClick={() => patch({ animal })}
-                      className={`rounded-xl border px-4 py-4 text-left font-semibold transition ${
+                      onClick={() => handleAnimalSelect(animal)}
+                      className={`group relative flex items-center justify-between rounded-2xl border-2 p-4 sm:p-5 text-left transition-all active:scale-[0.98] touch-manipulation cursor-pointer select-none ${
                         selected
-                          ? "border-moss bg-mist/60"
-                          : "border-moss/15 bg-white hover:border-moss/30"
+                          ? "border-[var(--moss)] bg-emerald-50/70 shadow-sm ring-2 ring-[var(--moss)]/20"
+                          : "border-[var(--mist)] bg-white hover:border-[var(--moss)]/40 hover:bg-[var(--paper)]/50"
                       }`}
                     >
-                      {animal}
+                      <div className="flex items-center gap-3 sm:gap-4">
+                        <span className="text-3xl sm:text-4xl">
+                          {isDog ? "🐶" : "🐱"}
+                        </span>
+                        <div>
+                          <span className="font-bold text-sm sm:text-base text-[var(--ink)] block">
+                            {animal}
+                          </span>
+                          <span className="text-[11px] sm:text-xs text-[var(--ink-soft)] font-normal">
+                            {isDog ? "ძაღლის შესახებ" : "კატის შესახებ"}
+                          </span>
+                        </div>
+                      </div>
+                      <div
+                        className={`h-5 w-5 rounded-full flex items-center justify-center text-xs font-bold transition ${
+                          selected
+                            ? "bg-[var(--moss)] text-white shadow-xs"
+                            : "border border-[var(--mist)] bg-[var(--paper)] text-transparent group-hover:border-[var(--moss)]/30"
+                        }`}
+                      >
+                        ✓
+                      </div>
                     </button>
                   );
                 })}
               </div>
-            </fieldset>
+            </div>
           </div>
         ) : null}
 
@@ -813,30 +970,72 @@ export default function CreateListingForm() {
                 </li>
               </ul>
             </div>
+
+            {user ? (
+              <div className="flex items-center justify-between gap-3 rounded-xl bg-emerald-50 border border-emerald-200 px-4 py-3 text-xs sm:text-sm text-emerald-800">
+                <div className="flex items-start gap-2">
+                  <svg className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                  </svg>
+                  <div>
+                    <span>ავტორიზებული ხართ: <strong>{user.email}</strong></span>
+                    <span className="mt-0.5 block text-[11px] text-emerald-700">
+                      🔒 თქვენი ელფოსტა კონფიდენციალურია და საიტზე საჯაროდ არასდროს ჩანს
+                    </span>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={logout}
+                  className="shrink-0 text-xs text-emerald-800 hover:text-emerald-950 underline font-medium transition"
+                  title="სხვა ანგარიშით შესვლა"
+                >
+                  გამოსვლა
+                </button>
+              </div>
+            ) : (
+              <div className="flex items-center justify-between gap-3 rounded-xl bg-amber-50 border border-amber-200 px-4 py-3 text-xs sm:text-sm text-amber-900">
+                <div className="flex items-center gap-2">
+                  <svg className="w-4 h-4 text-amber-600 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                  </svg>
+                  <span>გამოქვეყნებამდე საჭიროა ავტორიზაცია</span>
+                </div>
+                <button
+                  type="button"
+                  onClick={openAuthModal}
+                  className="shrink-0 rounded-lg bg-moss px-3 py-1.5 text-xs font-semibold text-white hover:bg-leaf transition"
+                >
+                  შესვლა
+                </button>
+              </div>
+            )}
           </div>
         ) : null}
 
         {error ? (
-          <p className="mt-5 rounded-lg bg-[#f7d4d4] px-3 py-2 text-sm text-[#8f2a2a]">
+          <p className="mt-5 rounded-xl bg-red-50 border border-red-200 px-4 py-3 text-sm text-red-700 font-medium">
             {error}
           </p>
         ) : null}
 
-        <div className="mt-8 flex flex-wrap items-center justify-between gap-3">
+        <div className="mt-8 pt-6 border-t border-[var(--mist)]/70 flex items-center justify-between gap-3">
           {step > 1 ? (
             <button
               type="button"
               onClick={goBack}
-              className="rounded-md px-4 py-2.5 text-sm font-semibold text-ink-soft hover:text-ink"
+              className="inline-flex items-center gap-1.5 rounded-xl border border-[var(--mist)] bg-white px-4 py-2.5 text-xs sm:text-sm font-semibold text-[var(--ink-soft)] hover:text-[var(--ink)] hover:bg-[var(--paper)] transition"
             >
-              უკან
+              <span>←</span>
+              <span>უკან</span>
             </button>
           ) : (
             <Link
               href="/"
-              className="rounded-md px-4 py-2.5 text-sm font-semibold text-ink-soft hover:text-ink"
+              className="inline-flex items-center gap-1.5 rounded-xl border border-transparent px-3 py-2 text-xs sm:text-sm font-medium text-[var(--ink-soft)] hover:text-[var(--ink)] hover:bg-[var(--paper)] transition"
             >
-              რუკაზე დაბრუნება
+              <span>←</span>
+              <span>რუკაზე დაბრუნება</span>
             </Link>
           )}
 
@@ -844,17 +1043,18 @@ export default function CreateListingForm() {
             <button
               type="button"
               onClick={goNext}
-              className="rounded-md bg-moss px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-leaf"
+              className="inline-flex items-center gap-2 rounded-xl bg-[var(--moss)] px-6 py-2.5 text-xs sm:text-sm font-bold text-white shadow-sm transition hover:bg-[var(--leaf)] active:scale-[0.98]"
             >
-              შემდეგი
+              <span>შემდეგი</span>
+              <span>→</span>
             </button>
           ) : (
             <button
               type="submit"
               disabled={submitting}
-              className="rounded-md bg-moss px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-leaf disabled:opacity-60"
+              className="inline-flex items-center gap-2 rounded-xl bg-[var(--moss)] px-6 py-2.5 text-xs sm:text-sm font-bold text-white shadow-sm transition hover:bg-[var(--leaf)] disabled:opacity-60"
             >
-              {submitting ? "იგზავნება…" : "განცხადების გამოქვეყნება"}
+              {submitting ? "იგზავნება…" : "🚀 განცხადების გამოქვეყნება"}
             </button>
           )}
         </div>
