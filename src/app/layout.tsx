@@ -18,16 +18,73 @@ const display = Noto_Serif_Georgian({
 });
 
 export const metadata: Metadata = {
-  title: "იპოვე — დაკარგული შინაური ცხოველების პლატფორმა",
+  metadataBase: new URL("https://piu.ge"),
+  title: {
+    default: "piu.ge — დაკარგული და ნაპოვნი ცხოველები საქართველოში",
+    template: "%s — piu.ge",
+  },
   description:
-    "იპოვე აერთიანებს მთელ საქართველოს დაკარგული, ჩუქდება და ნაპოვნი კატებისა და ძაღლების საძიებლად.",
+    "piu.ge არის დაკარგული, ნაპოვნი და გასაჩუქებელი შინაური ცხოველების პირველი ინტერაქციული პლატფორმა საქართველოში. იპოვეთ თქვენი ოთხფეხა მეგობარი რუკაზე.",
+  keywords: [
+    "piu.ge",
+    "piu",
+    "პიუ",
+    "დაკარგული ცხოველები",
+    "დაკარგული ძაღლი",
+    "დაკარგული კატა",
+    "ნაპოვნი ცხოველები",
+    "ცხოველების ჩუქება",
+    "ცხოველთა დაცვა საქართველო",
+    "შინაური ცხოველები რუკაზე",
+  ],
+  authors: [{ name: "piu.ge" }],
+  creator: "piu.ge",
+  publisher: "piu.ge",
+  openGraph: {
+    type: "website",
+    locale: "ka_GE",
+    url: "https://piu.ge",
+    siteName: "piu.ge",
+    title: "piu.ge — დაკარგული და ნაპოვნი ცხოველები საქართველოში",
+    description:
+      "დაკარგული, ნაპოვნი და გასაჩუქებელი ძაღლებისა და კატების ინტერაქციული რუკა საქართველოში.",
+    images: [
+      {
+        url: "https://piu.ge/og-image.jpg",
+        width: 1200,
+        height: 630,
+        alt: "piu.ge — დაკარგული ცხოველების პლატფორმა",
+      },
+    ],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "piu.ge — დაკარგული და ნაპოვნი ცხოველები საქართველოში",
+    description:
+      "დაკარგული, ნაპოვნი და გასაჩუქებელი ძაღლებისა და კატების ინტერაქციული რუკა საქართველოში.",
+    images: ["https://piu.ge/og-image.jpg"],
+  },
   appleWebApp: {
     capable: true,
     statusBarStyle: "default",
-    title: "იპოვე",
+    title: "piu.ge",
   },
   formatDetection: {
     telephone: false,
+  },
+  alternates: {
+    canonical: "https://piu.ge",
+  },
+  robots: {
+    index: true,
+    follow: true,
+    googleBot: {
+      index: true,
+      follow: true,
+      "max-video-preview": -1,
+      "max-image-preview": "large",
+      "max-snippet": -1,
+    },
   },
 };
 
