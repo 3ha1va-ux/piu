@@ -364,12 +364,12 @@ export default function MyListingsPage() {
                 </div>
 
                 {/* Filter Tabs */}
-                <div className="flex items-center gap-1.5 p-1 bg-white rounded-xl border border-[var(--mist)] self-start sm:self-auto text-xs font-medium">
+                <div className="flex items-center gap-1.5 p-1 bg-white rounded-xl border border-[var(--mist)] max-w-full overflow-x-auto text-xs font-medium shrink-0">
                   <button
                     onClick={() => setFilter("all")}
-                    className={`px-3 py-1.5 rounded-lg transition ${
+                    className={`px-3 py-1.5 rounded-lg transition whitespace-nowrap active:scale-95 touch-manipulation ${
                       filter === "all"
-                        ? "bg-[var(--moss)] text-white"
+                        ? "bg-[var(--moss)] text-white shadow-xs font-semibold"
                         : "text-[var(--ink-soft)] hover:text-[var(--ink)]"
                     }`}
                   >
@@ -377,9 +377,9 @@ export default function MyListingsPage() {
                   </button>
                   <button
                     onClick={() => setFilter("active")}
-                    className={`px-3 py-1.5 rounded-lg transition ${
+                    className={`px-3 py-1.5 rounded-lg transition whitespace-nowrap active:scale-95 touch-manipulation ${
                       filter === "active"
-                        ? "bg-[var(--moss)] text-white"
+                        ? "bg-[var(--moss)] text-white shadow-xs font-semibold"
                         : "text-[var(--ink-soft)] hover:text-[var(--ink)]"
                     }`}
                   >
@@ -387,13 +387,13 @@ export default function MyListingsPage() {
                   </button>
                   <button
                     onClick={() => setFilter("resolved")}
-                    className={`px-3 py-1.5 rounded-lg transition ${
+                    className={`px-3 py-1.5 rounded-lg transition whitespace-nowrap active:scale-95 touch-manipulation ${
                       filter === "resolved"
-                        ? "bg-[var(--moss)] text-white"
+                        ? "bg-[var(--moss)] text-white shadow-xs font-semibold"
                         : "text-[var(--ink-soft)] hover:text-[var(--ink)]"
                     }`}
                   >
-                    ნაპოვნი / გაჩუქებული ({resolvedCount})
+                    დასრულებული ({resolvedCount})
                   </button>
                 </div>
               </div>

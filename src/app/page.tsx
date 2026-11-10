@@ -1,5 +1,6 @@
 import Link from "next/link";
 import MapExperience from "@/components/MapExperience";
+import SiteFooter from "@/components/SiteFooter";
 
 const steps = [
   {
@@ -80,16 +81,9 @@ export default function Home() {
         </section>
       </main>
 
-      <footer className="hidden border-t border-moss/10 bg-paper px-5 py-8 md:block md:px-8">
-        <div className="mx-auto flex max-w-6xl flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <p className="font-[family-name:var(--font-display)] text-lg font-semibold tracking-tight text-ink">
-            piu.ge
-          </p>
-          <p className="text-sm text-ink-soft">
-            დაკარგული · ჩუქდება · ნაპოვნი · რუკა · საქართველო
-          </p>
-        </div>
-      </footer>
+      <div className="hidden md:block">
+        <SiteFooter />
+      </div>
     </div>
   );
 }

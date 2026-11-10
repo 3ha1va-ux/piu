@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import SiteHeader from "@/components/SiteHeader";
+import SiteFooter from "@/components/SiteFooter";
 import ListingDetailView from "@/components/ListingDetailView";
 import { getListingById } from "@/lib/getListing";
 import { markerCaption } from "@/lib/markerStyles";
@@ -94,19 +95,21 @@ export default async function ListingDetailPage({ params }: PageProps) {
   };
 
   return (
-    <div className="min-h-full bg-[linear-gradient(165deg,#e8f1ec_0%,#eef4f0_45%,#dce9e2_100%)]">
+    <div className="flex min-h-screen flex-col bg-[linear-gradient(165deg,#e8f1ec_0%,#eef4f0_45%,#dce9e2_100%)]">
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
       />
       <SiteHeader />
 
-      <main className="mx-auto w-full max-w-5xl px-4 py-8 sm:px-6 pb-16 md:px-8">
+      <main className="mx-auto w-full max-w-5xl flex-1 px-4 py-8 sm:px-6 pb-16 md:px-8">
         <p className="mb-4 text-xs sm:text-sm font-semibold uppercase tracking-[0.18em] text-[var(--lake)]">
           განცხადების დეტალები
         </p>
         <ListingDetailView listing={listing} />
       </main>
+
+      <SiteFooter />
     </div>
   );
 }

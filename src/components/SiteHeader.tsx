@@ -19,8 +19,18 @@ export default function SiteHeader() {
         setDropdownOpen(false);
       }
     }
+    function handleKeyDown(event: KeyboardEvent) {
+      if (event.key === "Escape") {
+        setDropdownOpen(false);
+        setMobileMenuOpen(false);
+      }
+    }
     document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
+    window.addEventListener("keydown", handleKeyDown);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+      window.removeEventListener("keydown", handleKeyDown);
+    };
   }, []);
 
   const navLinks = [
@@ -144,10 +154,11 @@ export default function SiteHeader() {
           {/* Mobile Menu Toggle */}
           <button
             onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-            className="md:hidden p-2 rounded-xl text-[var(--ink)] hover:bg-[var(--paper)] transition"
+            className="md:hidden min-w-[44px] min-h-[44px] flex items-center justify-center rounded-xl text-[var(--ink)] hover:bg-[var(--paper)] transition active:scale-95 touch-manipulation"
             aria-label="მენიუ"
+            aria-expanded={mobileMenuOpen}
           >
-            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               {mobileMenuOpen ? (
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
               ) : (
@@ -160,40 +171,43 @@ export default function SiteHeader() {
 
       {/* Mobile Menu Dropdown */}
       {mobileMenuOpen && (
-        <div className="md:hidden border-t border-[var(--mist)]/70 bg-white px-4 py-3 space-y-2 text-sm">
-          {navLinks.map((link) => (
-            <Link
-              key={link.href}
-              href={link.href}
-              onClick={() => setMobileMenuOpen(false)}
-              className="block px-3 py-2 rounded-xl text-[var(--ink)] hover:bg-[var(--paper)] font-medium"
-            >
-              {link.name}
-            </Link>
-          ))}
+        <div className="md:hidden border-t border-[var(--mist)]/70 bg-white/95 backdrop-blur-md px-4 py-3 space-y-2 text-sm shadow-lg animate-in slide-in-from-top-2 duration-150">
+          {navLinks.map((link) => {
+            const isActive = pathname === link.href;
+            return (
+              <Link
+                key={link.href}
+                href={link.href}
+                onClick={() => setMobileMenuOpen(false)}
+                className={`block px-3.5 py-2.5 rounded-xl text-sm font-medium transition ${
+                  isActive
+                    ? "bg-emerald-50 text-[var(--moss)] font-semibold"
+                    : "text-[var(--ink)] hover:bg-[var(--paper)]"
+                }`}
+              >
+                {link.name}
+              </Link>
+            );
+          })}
           <div className="border-t border-[var(--mist)]/60 pt-2 space-y-1">
-            <Link
-              href="/wesebi"
-              onClick={() => setMobileMenuOpen(false)}
-              className="block px-3 py-1.5 text-xs text-[var(--ink-soft)] hover:text-[var(--ink)] font-medium"
-            >
-              🛡️ საიტის წესები & უსაფრთხოება
-            </Link>
             <Link
               href="/privacy"
               onClick={() => setMobileMenuOpen(false)}
-              className="block px-3 py-1.5 text-xs text-[var(--ink-soft)] hover:text-[var(--ink)] font-medium"
+              className="block px-3.5 py-2 text-xs text-[var(--ink-soft)] hover:text-[var(--ink)] font-medium rounded-lg hover:bg-[var(--paper)]"
             >
               🔒 კონფიდენციალურობა
             </Link>
           </div>
-          <Link
-            href="/gancxadeba"
-            onClick={() => setMobileMenuOpen(false)}
-            className="block px-3 py-2 rounded-xl bg-[var(--moss)] text-white font-medium text-center"
-          >
-            + განცხადების დამატება
-          </Link>
+          <div className="pt-1">
+            <Link
+              href="/gancxadeba"
+              onClick={() => setMobileMenuOpen(false)}
+              className="flex items-center justify-center gap-2 h-11 px-4 rounded-xl bg-[var(--moss)] hover:bg-[var(--leaf)] text-white font-semibold text-sm shadow-sm transition active:scale-[0.99] touch-manipulation"
+            >
+              <span>+</span>
+              <span>განცხადების დამატება</span>
+            </Link>
+          </div>
         </div>
       )}
     </header>

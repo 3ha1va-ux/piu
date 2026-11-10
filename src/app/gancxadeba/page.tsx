@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import SiteHeader from "@/components/SiteHeader";
+import SiteFooter from "@/components/SiteFooter";
 import CreateListingForm from "@/components/CreateListingForm";
 
 export const metadata: Metadata = {
@@ -10,10 +11,10 @@ export const metadata: Metadata = {
 
 export default function CreateListingPage() {
   return (
-    <div className="min-h-full bg-[linear-gradient(165deg,#e8f1ec_0%,#eef4f0_45%,#dce9e2_100%)]">
+    <div className="flex min-h-screen flex-col bg-[linear-gradient(165deg,#e8f1ec_0%,#eef4f0_45%,#dce9e2_100%)]">
       <SiteHeader />
 
-      <main className="mx-auto w-full max-w-3xl px-4 py-8 sm:py-10 pb-20">
+      <main className="mx-auto w-full max-w-3xl flex-1 px-4 py-8 sm:py-10 pb-16">
         <div className="mb-8">
           <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-100/90 text-[var(--moss)] text-xs font-bold tracking-wide uppercase shadow-2xs">
             <span>🐾</span>
@@ -29,6 +30,8 @@ export default function CreateListingPage() {
 
         <CreateListingForm />
       </main>
+
+      <SiteFooter />
     </div>
   );
 }

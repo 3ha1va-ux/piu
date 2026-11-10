@@ -17,6 +17,7 @@ function formatDate(raw?: string): string | null {
 export default function ListingDetailView({ listing }: { listing: PetListing }) {
   const [posterOpen, setPosterOpen] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [lightboxOpen, setLightboxOpen] = useState(false);
   const photos = listing.photoUrls ?? [];
   const [index, setIndex] = useState(() =>
     Math.min(
@@ -78,12 +79,29 @@ export default function ListingDetailView({ listing }: { listing: PetListing }) 
       <div>
         <div className="overflow-hidden rounded-2xl border border-moss/10 bg-white shadow-[0_16px_48px_rgba(20,32,28,0.08)]">
           {main ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img
-              src={main}
-              alt={listing.name}
-              className="h-[320px] w-full object-cover md:h-[420px]"
-            />
+            <div
+              onClick={() => setLightboxOpen(true)}
+              className="relative group cursor-zoom-in"
+              role="button"
+              tabIndex={0}
+              aria-label="ფოტოს გადიდება"
+              onKeyDown={(e) => {
+                if (e.key === "Enter" || e.key === " ") setLightboxOpen(true);
+              }}
+            >
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={main}
+                alt={listing.name}
+                className="h-[320px] w-full object-cover md:h-[420px] transition-transform duration-300 group-hover:scale-[1.01]"
+              />
+              <span className="absolute bottom-3 right-3 px-2.5 py-1 rounded-lg bg-black/60 backdrop-blur-xs text-white text-xs font-medium flex items-center gap-1.5 opacity-90 group-hover:opacity-100 transition shadow-xs pointer-events-none">
+                <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0zM10 7v6m3-3H7" />
+                </svg>
+                <span>გადიდება</span>
+              </span>
+            </div>
           ) : (
             <div className="flex h-[280px] items-center justify-center bg-mist text-moss">
               ფოტო არ არის
@@ -96,9 +114,9 @@ export default function ListingDetailView({ listing }: { listing: PetListing }) 
                   key={`${listing.id}-${src}-${i}`}
                   type="button"
                   onClick={() => setIndex(i)}
-                  className={`overflow-hidden rounded-lg border-2 ${
+                  className={`overflow-hidden rounded-lg border-2 transition ${
                     i === index
-                      ? "border-moss"
+                      ? "border-moss ring-2 ring-moss/20"
                       : "border-transparent opacity-80 hover:opacity-100"
                   }`}
                 >
@@ -246,10 +264,12 @@ export default function ListingDetailView({ listing }: { listing: PetListing }) 
           <button
             type="button"
             onClick={() => setPosterOpen(true)}
-            className="inline-flex h-11 items-center justify-center gap-1.5 rounded-xl border border-moss/20 bg-white px-4 text-xs sm:text-sm font-semibold text-ink transition hover:bg-paper"
+            className="inline-flex h-11 items-center justify-center gap-2 rounded-xl border border-moss/20 bg-white px-4 text-xs sm:text-sm font-semibold text-ink transition hover:bg-paper active:scale-95 touch-manipulation"
             title="სამძებრო პოსტერის ამობეჭდვა"
           >
-            <span>🖹</span>
+            <svg className="w-4 h-4 text-moss" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
+            </svg>
             <span>პოსტერი</span>
           </button>
         </div>
@@ -329,6 +349,53 @@ export default function ListingDetailView({ listing }: { listing: PetListing }) 
           <PosterModal listing={listing} onClose={() => setPosterOpen(false)} />
         )}
       </div>
+
+      {/* Full-Screen Photo Zoom Lightbox */}
+      {lightboxOpen && main && (
+        <div
+          onClick={() => setLightboxOpen(false)}
+          role="dialog"
+          aria-modal="true"
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/90 backdrop-blur-md p-4 animate-in fade-in duration-150"
+        >
+          <button
+            onClick={() => setLightboxOpen(false)}
+            className="absolute top-4 right-4 min-w-[44px] min-h-[44px] flex items-center justify-center rounded-full bg-white/10 hover:bg-white/25 text-white text-2xl transition active:scale-95 touch-manipulation z-10"
+            aria-label="დახურვა"
+          >
+            ✕
+          </button>
+          <div
+            onClick={(e) => e.stopPropagation()}
+            className="relative max-w-4xl max-h-[85vh] flex flex-col items-center select-none"
+          >
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={main}
+              alt={listing.name}
+              className="max-w-full max-h-[75vh] rounded-2xl object-contain shadow-2xl"
+            />
+            {photos.length > 1 && (
+              <div className="mt-4 flex gap-2.5 overflow-x-auto p-1.5 max-w-full">
+                {photos.map((src, i) => (
+                  <button
+                    key={`lb-${src}-${i}`}
+                    onClick={() => setIndex(i)}
+                    className={`overflow-hidden rounded-xl border-2 transition shrink-0 ${
+                      i === index
+                        ? "border-emerald-400 ring-2 ring-emerald-400/50 scale-105"
+                        : "border-transparent opacity-60 hover:opacity-100"
+                    }`}
+                  >
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img src={src} alt="" className="h-14 w-14 object-cover" />
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
     </article>
   );
 }

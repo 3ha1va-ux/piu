@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import SiteHeader from "@/components/SiteHeader";
+import SiteFooter from "@/components/SiteFooter";
 import SearchConsole from "@/components/SearchConsole";
 
 export const metadata: Metadata = {
@@ -10,10 +11,10 @@ export const metadata: Metadata = {
 
 export default function SearchPage() {
   return (
-    <div className="min-h-full bg-[linear-gradient(165deg,#e8f1ec_0%,#eef4f0_45%,#dce9e2_100%)]">
+    <div className="flex min-h-screen flex-col bg-[linear-gradient(165deg,#e8f1ec_0%,#eef4f0_45%,#dce9e2_100%)]">
       <SiteHeader />
 
-      <main className="mx-auto w-full max-w-5xl px-4 py-8 sm:px-6 pb-16 md:px-8">
+      <main className="mx-auto w-full max-w-5xl flex-1 px-4 py-8 sm:px-6 pb-16 md:px-8">
         <div className="mb-8 max-w-2xl">
           <p className="text-xs sm:text-sm font-semibold uppercase tracking-[0.18em] text-[var(--lake)]">
             საძიებო კონსოლი
@@ -29,6 +30,8 @@ export default function SearchPage() {
 
         <SearchConsole variant="page" />
       </main>
+
+      <SiteFooter />
     </div>
   );
 }

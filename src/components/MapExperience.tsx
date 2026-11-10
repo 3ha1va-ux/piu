@@ -1055,7 +1055,17 @@ export default function MapExperience() {
               </span>
             </div>
 
-            <span className="flex min-w-0 flex-1 flex-col items-center gap-0.5 rounded-xl px-1 py-1.5 text-[11px] font-semibold text-moss">
+            <button
+              type="button"
+              onClick={() => {
+                setFiltersOpen(false);
+                setMobileMenuOpen(false);
+                setActiveId(null);
+                setPinnedListing(null);
+              }}
+              className="flex min-w-0 flex-1 flex-col items-center gap-0.5 rounded-xl px-1 py-1.5 text-[11px] font-semibold text-moss active:scale-95 touch-manipulation cursor-pointer"
+              aria-label="რუკაზე დაბრუნება"
+            >
               <NavIcon>
                 <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
                   <path
@@ -1068,7 +1078,7 @@ export default function MapExperience() {
                 </svg>
               </NavIcon>
               რუკა
-            </span>
+            </button>
 
             {user ? (
               <Link

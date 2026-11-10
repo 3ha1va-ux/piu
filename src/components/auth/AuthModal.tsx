@@ -31,6 +31,18 @@ export default function AuthModal() {
     }
   }, [isAuthModalOpen]);
 
+  // Close modal on Escape key press
+  useEffect(() => {
+    if (!isAuthModalOpen) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        closeAuthModal();
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [isAuthModalOpen, closeAuthModal]);
+
   // Resend cooldown timer
   useEffect(() => {
     if (countdown <= 0) return;
@@ -113,15 +125,21 @@ export default function AuthModal() {
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-xs animate-in fade-in duration-150">
+    <div
+      onClick={closeAuthModal}
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="auth-modal-title"
+      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/55 backdrop-blur-xs animate-in fade-in duration-150 overflow-y-auto"
+    >
       <div
-        className="relative w-full max-w-md bg-white rounded-3xl p-6 sm:p-8 shadow-2xl border border-[var(--mist)] text-[var(--ink)]"
+        className="relative w-full max-w-md bg-white rounded-3xl p-6 sm:p-8 shadow-2xl border border-[var(--mist)] text-[var(--ink)] my-auto transition-all"
         onClick={(e) => e.stopPropagation()}
       >
-        {/* Close Button */}
+        {/* Close Button - 44px touch target */}
         <button
           onClick={closeAuthModal}
-          className="absolute top-5 right-5 p-2 rounded-full text-[var(--ink-soft)] hover:bg-[var(--paper)] transition"
+          className="absolute top-4 right-4 min-w-[44px] min-h-[44px] flex items-center justify-center rounded-full text-[var(--ink-soft)] hover:text-[var(--ink)] hover:bg-[var(--paper)] transition active:scale-95 touch-manipulation"
           aria-label="დახურვა"
         >
           <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -130,19 +148,19 @@ export default function AuthModal() {
         </button>
 
         {/* Modal Header */}
-        <div className="text-center mb-6">
-          <div className="inline-flex items-center justify-center w-12 h-12 rounded-2xl bg-[var(--paper)] text-[var(--moss)] mb-3">
+        <div className="text-center mb-6 pt-1 sm:pt-0">
+          <div className="inline-flex items-center justify-center w-12 h-12 rounded-2xl bg-[var(--paper)] text-[var(--moss)] mb-3 shadow-xs">
             <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
             </svg>
           </div>
-          <h2 className="text-2xl font-bold font-display text-[var(--ink)] tracking-tight">
+          <h2 id="auth-modal-title" className="text-2xl font-bold font-display text-[var(--ink)] tracking-tight">
             {step === "email" ? "შესვლა piu.ge-ზე" : "ერთჯერადი კოდი"}
           </h2>
           <p className="text-xs sm:text-sm text-[var(--ink-soft)] mt-1.5 leading-relaxed">
             {step === "email"
               ? "აირჩიეთ სასურველი მეთოდი სწრაფი და უსაფრთხო ავტორიზაციისთვის"
-              : `გამოგზავნილია მეილზე: ${email}. შეგიძლიათ გადახვიდეთ მეილის ბმულზე ან ჩაწეროთ 6-ნიშნა კოდი.`}
+              : `გამოგზავნილია მეილზე: ${email}. შეგიძლიათ პირდაპირ დააჭიროთ მეილის ბმულს ან ჩაწეროთ 6-ნიშნა კოდი.`}
           </p>
         </div>
 
@@ -174,7 +192,7 @@ export default function AuthModal() {
               onClick={handleGoogleClick}
               disabled={isSubmitting}
               type="button"
-              className="w-full flex items-center justify-center gap-3 py-3 px-4 rounded-xl border-2 border-[var(--mist)] hover:border-[var(--moss)]/40 hover:bg-[var(--paper)] font-semibold text-sm transition shadow-sm disabled:opacity-50"
+              className="w-full flex items-center justify-center gap-3 h-12 px-4 rounded-xl border-2 border-[var(--mist)] hover:border-[var(--moss)]/40 hover:bg-[var(--paper)] font-semibold text-sm sm:text-base transition shadow-xs active:scale-[0.99] touch-manipulation disabled:opacity-50"
             >
               <svg className="w-5 h-5 shrink-0" viewBox="0 0 24 24">
                 <path
@@ -204,7 +222,7 @@ export default function AuthModal() {
             </div>
 
             {/* Email Form */}
-            <form onSubmit={handleSendEmail} className="space-y-3">
+            <form onSubmit={handleSendEmail} className="space-y-3.5">
               <div>
                 <label htmlFor="auth-email" className="block text-xs font-semibold text-[var(--ink)] mb-1.5">
                   თქვენი ელფოსტა
@@ -222,7 +240,7 @@ export default function AuthModal() {
                     placeholder="saxeli@gmail.com"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
-                    className="w-full pl-10 pr-4 py-2.5 text-sm rounded-xl border border-[var(--mist)] focus:border-[var(--moss)] focus:ring-2 focus:ring-[var(--moss)]/20 outline-none transition bg-white"
+                    className="w-full pl-10 pr-4 h-12 text-base sm:text-sm rounded-xl border border-[var(--mist)] focus:border-[var(--moss)] focus:ring-2 focus:ring-[var(--moss)]/20 outline-none transition bg-white"
                   />
                 </div>
               </div>
@@ -230,7 +248,7 @@ export default function AuthModal() {
               <button
                 type="submit"
                 disabled={isSubmitting || !email.trim()}
-                className="w-full py-2.5 px-4 rounded-xl bg-[var(--moss)] hover:bg-[var(--leaf)] text-white text-sm font-semibold transition shadow-md shadow-[var(--moss)]/15 disabled:opacity-50"
+                className="w-full h-12 px-4 rounded-xl bg-[var(--moss)] hover:bg-[var(--leaf)] text-white text-sm sm:text-base font-semibold transition shadow-md shadow-[var(--moss)]/15 active:scale-[0.99] touch-manipulation disabled:opacity-50"
               >
                 {isSubmitting ? "იგზავნება..." : "შესვლის ბმულის მიღება"}
               </button>
@@ -238,7 +256,7 @@ export default function AuthModal() {
           </div>
         )}
 
-        {/* STEP 2: Enter 6-digit OTP (Optional if user prefers code over clicking email link) */}
+        {/* STEP 2: Enter 6-digit OTP */}
         {step === "otp" && (
           <form onSubmit={handleVerifyOtp} className="space-y-4">
             <div className="p-3.5 rounded-2xl bg-[var(--paper)] text-xs text-[var(--ink-soft)] leading-relaxed text-center">
@@ -254,19 +272,19 @@ export default function AuthModal() {
                 type="text"
                 inputMode="numeric"
                 autoComplete="one-time-code"
-                maxLength={8}
+                maxLength={6}
                 autoFocus
                 placeholder="123456"
                 value={otpCode}
                 onChange={(e) => setOtpCode(e.target.value.replace(/\s+/g, ""))}
-                className="w-full tracking-[0.35em] text-center font-mono text-2xl font-bold py-3 px-4 rounded-xl border-2 border-[var(--moss)] focus:ring-2 focus:ring-[var(--moss)]/30 outline-none transition bg-white"
+                className="w-full tracking-[0.35em] text-center font-mono text-2xl font-bold h-14 px-4 rounded-xl border-2 border-[var(--moss)] focus:ring-2 focus:ring-[var(--moss)]/30 outline-none transition bg-white"
               />
             </div>
 
             <button
               type="submit"
               disabled={isSubmitting || otpCode.trim().length < 6}
-              className="w-full py-3 px-4 rounded-xl bg-[var(--moss)] hover:bg-[var(--leaf)] text-white text-sm font-semibold transition shadow-md shadow-[var(--moss)]/15 disabled:opacity-50"
+              className="w-full h-12 px-4 rounded-xl bg-[var(--moss)] hover:bg-[var(--leaf)] text-white text-sm sm:text-base font-semibold transition shadow-md shadow-[var(--moss)]/15 active:scale-[0.99] touch-manipulation disabled:opacity-50"
             >
               {isSubmitting ? "მოწმდება..." : "კოდით დადასტურება"}
             </button>
