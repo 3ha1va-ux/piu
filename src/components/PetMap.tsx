@@ -665,88 +665,181 @@ function PlaceFlight({ target }: { target: PlaceTarget | null }) {
 
 function UserLocationControl() {
   const map = useMap();
-  const [locating, setLocating] = useState(false);
-  const userMarkerRef = useRef<L.CircleMarker | null>(null);
+  const userMarkerRef = useRef<L.LayerGroup | null>(null);
 
-  const handleLocate = useCallback(
-    (e: React.MouseEvent) => {
-      e.preventDefault();
-      e.stopPropagation();
+  useEffect(() => {
+    let isLocating = false;
 
-      if (typeof window === "undefined" || !("geolocation" in navigator)) {
-        alert("თქვენს ბრაუზერს არ აქვს გეოლოკაციის მხარდაჭერა.");
-        return;
-      }
+    // Create a native Leaflet Control that sits in the official control stack
+    const LocateControl = L.Control.extend({
+      options: { position: "bottomright" },
+      onAdd: function () {
+        const container = L.DomUtil.create(
+          "div",
+          "leaflet-control-locate leaflet-bar leaflet-control !border-none !shadow-[0_4px_16px_rgba(20,32,28,0.18)] !rounded-xl overflow-hidden mb-2"
+        );
 
-      setLocating(true);
-      navigator.geolocation.getCurrentPosition(
-        (position) => {
-          setLocating(false);
-          const { latitude, longitude } = position.coords;
+        const button = L.DomUtil.create(
+          "button",
+          "flex h-10 w-10 sm:h-9 sm:w-9 items-center justify-center bg-white/95 text-[var(--moss)] hover:bg-[var(--paper)] active:scale-95 transition touch-manipulation cursor-pointer",
+          container
+        );
+        button.type = "button";
+        button.title = "ჩემი მდებარეობის პოვნა რუკაზე";
+        button.setAttribute("aria-label", "ჩემი მდებარეობა");
 
-          if (userMarkerRef.current) {
-            map.removeLayer(userMarkerRef.current);
+        const renderIcon = (loading: boolean) => {
+          if (loading) {
+            button.innerHTML = `
+              <div class="h-4 w-4 border-2 border-[var(--moss)] border-t-transparent rounded-full animate-spin"></div>
+            `;
+            button.setAttribute("disabled", "true");
+            button.style.opacity = "0.7";
+          } else {
+            button.innerHTML = `
+              <svg class="w-5 h-5 text-[var(--moss)]" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                <circle cx="12" cy="12" r="7" stroke-width="2" />
+                <circle cx="12" cy="12" r="2.5" fill="currentColor" />
+                <path stroke-linecap="round" stroke-width="2" d="M12 2v3m0 14v3M2 12h3m14 0h3" />
+              </svg>
+            `;
+            button.removeAttribute("disabled");
+            button.style.opacity = "1";
+          }
+        };
+
+        renderIcon(false);
+
+        // CRITICAL: Prevent Leaflet map dragging/clicks from swallowing touches on this control!
+        L.DomEvent.disableClickPropagation(container);
+        L.DomEvent.disableScrollPropagation(container);
+
+        const triggerLocate = () => {
+          if (isLocating) return;
+
+          if (typeof window === "undefined" || !("geolocation" in navigator)) {
+            alert("თქვენს მოწყობილობას არ აქვს GPS / ლოკაციის მხარდაჭერა.");
+            return;
           }
 
-          const marker = L.circleMarker([latitude, longitude], {
-            radius: 8,
-            color: "#ffffff",
-            weight: 2.5,
-            fillColor: "#2563eb",
-            fillOpacity: 1,
+          isLocating = true;
+          renderIcon(true);
+
+          const onSuccess = (pos: GeolocationPosition) => {
+            isLocating = false;
+            renderIcon(false);
+            const { latitude, longitude, accuracy } = pos.coords;
+
+            // Remove existing location marker & halo if any
+            if (userMarkerRef.current) {
+              map.removeLayer(userMarkerRef.current);
+              userMarkerRef.current = null;
+            }
+
+            const group = L.layerGroup();
+
+            // Accuracy radius halo
+            const halo = L.circle([latitude, longitude], {
+              radius: Math.min(Math.max(accuracy || 30, 25), 400),
+              color: "#2563eb",
+              weight: 1.5,
+              fillColor: "#3b82f6",
+              fillOpacity: 0.15,
+            });
+            group.addLayer(halo);
+
+            // Pulsing core marker
+            const marker = L.circleMarker([latitude, longitude], {
+              radius: 8,
+              color: "#ffffff",
+              weight: 2.5,
+              fillColor: "#2563eb",
+              fillOpacity: 1,
+            });
+            marker.bindTooltip("თქვენ აქ იმყოფებით", {
+              permanent: false,
+              direction: "top",
+            });
+            group.addLayer(marker);
+
+            group.addTo(map);
+            userMarkerRef.current = group;
+
+            map.flyTo([latitude, longitude], Math.max(map.getZoom(), 15), {
+              duration: 0.9,
+            });
+          };
+
+          const onError = (err: GeolocationPositionError) => {
+            console.warn("Geolocation attempt 1 failed:", err);
+            // If high accuracy timed out or unavailable, try fallback with low accuracy (Wi-Fi/Cell)
+            if (err.code === err.TIMEOUT || err.code === err.POSITION_UNAVAILABLE) {
+              navigator.geolocation.getCurrentPosition(
+                onSuccess,
+                (err2) => {
+                  isLocating = false;
+                  renderIcon(false);
+                  console.warn("Fallback geolocation also failed:", err2);
+                  showGeoAlert(err2);
+                },
+                { enableHighAccuracy: false, timeout: 20000, maximumAge: 60000 }
+              );
+              return;
+            }
+
+            isLocating = false;
+            renderIcon(false);
+            showGeoAlert(err);
+          };
+
+          const showGeoAlert = (error: GeolocationPositionError) => {
+            if (error.code === error.PERMISSION_DENIED) {
+              alert(
+                "ლოკაციის გაზიარება დაბლოკილია. გთხოვთ, ბრაუზერის პარამეტრებში ჩართოთ ლოკაცია piu.ge-სთვის."
+              );
+            } else if (error.code === error.TIMEOUT) {
+              alert("ლოკაციის დადგენის დრო ამოიწურა. გთხოვთ, სცადოთ ხელახლა.");
+            } else {
+              alert("თქვენი მდებარეობის დადგენა ვერ მოხერხდა. შეამოწმეთ მოწყობილობის GPS.");
+            }
+          };
+
+          navigator.geolocation.getCurrentPosition(onSuccess, onError, {
+            enableHighAccuracy: true,
+            timeout: 12000,
+            maximumAge: 30000,
           });
+        };
 
-          marker.bindTooltip("თქვენ აქ იმყოფებით", {
-            permanent: false,
-            direction: "top",
-          });
+        L.DomEvent.on(button, "click", (e) => {
+          L.DomEvent.preventDefault(e);
+          L.DomEvent.stopPropagation(e);
+          triggerLocate();
+        });
 
-          marker.addTo(map);
-          userMarkerRef.current = marker;
+        // Also add touchend listener for instantaneous response on mobile devices
+        L.DomEvent.on(button, "touchend", (e) => {
+          L.DomEvent.preventDefault(e);
+          L.DomEvent.stopPropagation(e);
+          triggerLocate();
+        });
 
-          map.flyTo([latitude, longitude], Math.max(map.getZoom(), 15), {
-            duration: 0.9,
-          });
-        },
-        (error) => {
-          setLocating(false);
-          console.warn("Geolocation error:", error);
-          alert(
-            "ლოკაციის განსაზღვრა ვერ მოხერხდა. გთხოვთ, ბრაუზერში ჩართოთ ლოკაციის გაზიარების ნებართვა piu.ge-სთვის."
-          );
-        },
-        { enableHighAccuracy: true, timeout: 10000, maximumAge: 30000 }
-      );
-    },
-    [map]
-  );
+        return container;
+      },
+    });
 
-  return (
-    <div className="leaflet-bottom leaflet-right mb-20 mr-2.5 sm:mr-3 z-[400] pointer-events-auto">
-      <button
-        type="button"
-        onClick={handleLocate}
-        disabled={locating}
-        className="flex h-10 w-10 items-center justify-center rounded-xl border border-moss/15 bg-white/95 text-ink shadow-[0_4px_16px_rgba(20,32,28,0.15)] backdrop-blur-md transition hover:bg-paper active:scale-95 disabled:opacity-50"
-        title="ჩემი მდებარეობის პოვნა რუკაზე"
-        aria-label="ჩემი მდებარეობა"
-      >
-        {locating ? (
-          <div className="h-4 w-4 border-2 border-moss border-t-transparent rounded-full animate-spin" />
-        ) : (
-          <svg className="w-5 h-5 text-moss" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2}
-              d="M12 2v2m0 16v2m10-10h-2M4 12H2m15.071-7.071l-1.414 1.414M8.343 17.657l-1.414 1.414m12.728 0l-1.414-1.414M8.343 6.343L6.929 4.929"
-            />
-            <circle cx="12" cy="12" r="3" stroke="currentColor" strokeWidth={2} fill="currentColor" fillOpacity={0.2} />
-          </svg>
-        )}
-      </button>
-    </div>
-  );
+    const control = new LocateControl();
+    control.addTo(map);
+
+    return () => {
+      control.remove();
+      if (userMarkerRef.current) {
+        map.removeLayer(userMarkerRef.current);
+      }
+    };
+  }, [map]);
+
+  return null;
 }
 
 export default function PetMap({
