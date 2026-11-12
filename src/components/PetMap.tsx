@@ -359,23 +359,55 @@ function ClusteredMarkers({
     });
 
     clusterGroup.on("clusterclick", (event) => {
-      const cluster = event.layer as L.MarkerCluster;
-      const bounds = cluster.getBounds();
-      const targetZoom = map.getBoundsZoom(bounds, false);
-      const currentZoom = map.getZoom();
-
-      const shouldSpiderfy =
-        targetZoom <= currentZoom || currentZoom >= 17;
-
-      if (shouldSpiderfy) {
-        cluster.spiderfy();
+      if ((clusterGroup as unknown as { _inZoomAnimation?: boolean })._inZoomAnimation) {
         return;
       }
 
-      map.flyToBounds(bounds.pad(0.25), {
-        duration: 0.55,
-        easeLinearity: 0.25,
-      });
+      const cluster = event.layer as L.MarkerCluster;
+      const bounds = cluster.getBounds();
+      const currentZoom = map.getZoom();
+      const maxClusteringZoom = 16;
+
+      const ne = bounds.getNorthEast();
+      const sw = bounds.getSouthWest();
+      const isSameLocation =
+        Math.abs(ne.lat - sw.lat) < 0.0001 && Math.abs(ne.lng - sw.lng) < 0.0001;
+
+      // When markers are all at the exact same location (or at maxClusteringZoom)
+      if (isSameLocation || currentZoom >= maxClusteringZoom) {
+        if (cluster.getChildCount() <= 60) {
+          cluster.spiderfy();
+          return;
+        }
+      }
+
+      // Calculate target zoom level that fits this cluster (with 32px padding)
+      const targetBoundsZoom = map.getBoundsZoom(bounds, false, L.point(32, 32));
+
+      // If targetBoundsZoom is deeper than currentZoom, fit the bounds smoothly
+      if (targetBoundsZoom > currentZoom) {
+        const nextZoom = Math.min(
+          maxClusteringZoom,
+          Math.max(currentZoom + 1, targetBoundsZoom),
+        );
+        map.flyToBounds(bounds, {
+          padding: [32, 32],
+          maxZoom: nextZoom,
+          duration: 0.55,
+          easeLinearity: 0.25,
+        });
+      } else {
+        // Wide cluster (e.g. 234 pins spanning a whole district where boundsZoom <= currentZoom):
+        // Zoom into cluster center by at least 1-2 levels so it cleanly splits apart!
+        const nextZoom = Math.min(
+          maxClusteringZoom,
+          currentZoom + (currentZoom < 14 ? 2 : 1),
+        );
+        map.flyTo(cluster.getLatLng(), nextZoom, {
+          duration: 0.55,
+          easeLinearity: 0.25,
+        });
+      }
     });
 
     groupRef.current = clusterGroup;
