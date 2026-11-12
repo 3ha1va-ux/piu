@@ -120,7 +120,10 @@ export default function AdminAnalyticsPage() {
   };
 
   useEffect(() => {
-    fetchData();
+    const timer = setTimeout(() => {
+      void fetchData();
+    }, 0);
+    return () => clearTimeout(timer);
   }, [fetchData]);
 
   const total = data?.summary.totalListings || 1;

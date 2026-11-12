@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect } from "react";
 import Image from "next/image";
 import type { PetListing } from "@/data/listings-types";
 
@@ -9,6 +10,15 @@ interface PosterModalProps {
 }
 
 export default function PosterModal({ listing, onClose }: PosterModalProps) {
+  useEffect(() => {
+    if (!listing) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") onClose();
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [listing, onClose]);
+
   if (!listing) return null;
 
   const handlePrint = () => {
@@ -29,7 +39,15 @@ export default function PosterModal({ listing, onClose }: PosterModalProps) {
   )}`;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs overflow-y-auto">
+    <div
+      role="dialog"
+      aria-modal="true"
+      aria-label="საბეჭდი ფლაერის გენერატორი"
+      onClick={(e) => {
+        if (e.target === e.currentTarget) onClose();
+      }}
+      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs overflow-y-auto"
+    >
       <div className="relative w-full max-w-2xl bg-white rounded-3xl p-6 sm:p-8 shadow-2xl border border-[var(--mist)] my-8">
         {/* Top Control Bar (Hidden during print) */}
         <div className="print:hidden flex items-center justify-between pb-4 mb-6 border-b border-[var(--mist)]">
@@ -52,8 +70,10 @@ export default function PosterModal({ listing, onClose }: PosterModalProps) {
               <span>ამობეჭდვა</span>
             </button>
             <button
+              type="button"
               onClick={onClose}
-              className="p-2 text-[var(--ink-soft)] hover:text-[var(--ink)] rounded-xl hover:bg-[var(--paper)] transition"
+              aria-label="დახურვა"
+              className="inline-flex min-h-[44px] min-w-[44px] items-center justify-center text-[var(--ink-soft)] hover:text-[var(--ink)] rounded-xl hover:bg-[var(--paper)] transition"
             >
               ✕
             </button>

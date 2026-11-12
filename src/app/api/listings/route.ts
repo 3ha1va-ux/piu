@@ -107,14 +107,30 @@ export async function POST(request: Request) {
     const chipRaw = String(form.get("hasChip") ?? "").trim();
     const lat = Number(form.get("lat"));
     const lng = Number(form.get("lng"));
-    const userId = String(form.get("userId") ?? "").trim();
 
-    if (!userId) {
+    const authHeader = request.headers.get("authorization");
+    const token = authHeader?.startsWith("Bearer ")
+      ? authHeader.slice(7).trim()
+      : "";
+    if (!token) {
       return NextResponse.json(
-        { error: "განცხადების განსათავსებლად საჭიროა ავტორიზაცია." },
+        { error: "განცხადების განსათავსებად საჭიროა ავტორიზაცია." },
         { status: 401 },
       );
     }
+
+    const {
+      data: { user },
+      error: authError,
+    } = await supabaseAdmin.auth.getUser(token);
+    if (authError || !user) {
+      return NextResponse.json(
+        { error: "სესია ვადაგასულია. გთხოვთ თავიდან შეხვიდეთ." },
+        { status: 401 },
+      );
+    }
+
+    const userId = user.id;
 
     // Anti-Spam Rate Limit: max 3 listings per 24 hours per user
     try {
@@ -200,9 +216,28 @@ export async function POST(request: Request) {
       photos.length - 1,
     );
 
+    const rawVideoUrl = String(form.get("videoUrl") ?? "").trim();
+    const supabaseBase = process.env.NEXT_PUBLIC_SUPABASE_URL?.replace(/\/+$/, "");
+    let preuploadedVideoUrl: string | null = null;
+    if (rawVideoUrl) {
+      const expectedPrefix = supabaseBase
+        ? `${supabaseBase}/storage/v1/object/public/pet-media/videos/${userId}/`
+        : null;
+      if (expectedPrefix && rawVideoUrl.startsWith(expectedPrefix)) {
+        preuploadedVideoUrl = rawVideoUrl;
+      } else {
+        return NextResponse.json(
+          { error: "ვიდეოს ბმული არავალიდურია." },
+          { status: 400 },
+        );
+      }
+    }
+
     const videoRaw = form.get("video");
     const video =
-      videoRaw instanceof File && videoRaw.size > 0 ? videoRaw : null;
+      !preuploadedVideoUrl && videoRaw instanceof File && videoRaw.size > 0
+        ? videoRaw
+        : null;
     if (video && video.size > 40_000_000) {
       return NextResponse.json(
         { error: "ვიდეო მაქსიმუმ 40MB უნდა იყოს" },
@@ -243,7 +278,8 @@ export async function POST(request: Request) {
         { status: 400 },
       );
     }
-    const videoUrl = await saveListingVideo(listingId, video);
+    const videoUrl =
+      preuploadedVideoUrl ?? (await saveListingVideo(listingId, video));
 
     const listing = await createUserListing(
       payload,

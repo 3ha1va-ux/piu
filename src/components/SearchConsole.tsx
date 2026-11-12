@@ -137,10 +137,14 @@ export default function SearchConsole({
     const hasFilterInner =
       !isMap && (tones.length > 0 || animals.length > 0 || Boolean(dateFrom || dateTo));
     if (!hasQueryInner && !hasFilterInner) {
-      setItems([]);
-      setTotal(0);
-      setSearched(false);
-      return;
+      debounceRef.current = setTimeout(() => {
+        setItems([]);
+        setTotal(0);
+        setSearched(false);
+      }, 0);
+      return () => {
+        if (debounceRef.current) clearTimeout(debounceRef.current);
+      };
     }
 
     const ac = new AbortController();
@@ -176,7 +180,7 @@ export default function SearchConsole({
       ac.abort();
       if (debounceRef.current) clearTimeout(debounceRef.current);
     };
-  }, [q, tones, animals, dateFrom, dateTo, sort]);
+  }, [q, tones, animals, dateFrom, dateTo, sort, isMap]);
 
   function toggleTone(tone: ListingTone) {
     setTones((prev) =>
@@ -406,7 +410,7 @@ export default function SearchConsole({
                   e.preventDefault();
                   if (places[0]) handleSelectPlace(places[0]);
                 }}
-                className={`w-full rounded-xl border border-moss/15 bg-white py-2.5 pl-9 text-sm text-ink outline-none focus:border-moss md:rounded-lg ${q ? "pr-8" : "pr-3"}`}
+                className={`w-full rounded-xl border border-moss/15 bg-white py-2.5 pl-9 text-base text-ink outline-none focus:border-moss sm:text-sm md:rounded-lg ${q ? "pr-8" : "pr-3"}`}
               />
               {q ? (
                 <button
@@ -511,7 +515,7 @@ export default function SearchConsole({
                       type="date"
                       value={dateFrom}
                       onChange={(e) => setDateFrom(e.target.value)}
-                      className="mt-1 w-full rounded-md border border-moss/15 bg-white px-2 py-2 text-sm text-ink outline-none focus:border-moss"
+                      className="mt-1 w-full rounded-md border border-moss/15 bg-white px-2 py-2 text-base text-ink outline-none focus:border-moss sm:text-sm"
                     />
                   </label>
                   <label className="block text-xs text-ink-soft">
@@ -520,7 +524,7 @@ export default function SearchConsole({
                       type="date"
                       value={dateTo}
                       onChange={(e) => setDateTo(e.target.value)}
-                      className="mt-1 w-full rounded-md border border-moss/15 bg-white px-2 py-2 text-sm text-ink outline-none focus:border-moss"
+                      className="mt-1 w-full rounded-md border border-moss/15 bg-white px-2 py-2 text-base text-ink outline-none focus:border-moss sm:text-sm"
                     />
                   </label>
                 </div>
@@ -533,7 +537,7 @@ export default function SearchConsole({
                 <select
                   value={sort}
                   onChange={(e) => setSort(e.target.value as ListingSort)}
-                  className="mt-2 w-full rounded-md border border-moss/15 bg-white px-2 py-2 text-sm text-ink outline-none focus:border-moss"
+                  className="mt-2 w-full rounded-md border border-moss/15 bg-white px-2 py-2 text-base text-ink outline-none focus:border-moss sm:text-sm"
                 >
                   {SORT_OPTIONS.map((option) => (
                     <option key={option.value} value={option.value}>

@@ -36,9 +36,12 @@ export async function POST(request: Request) {
     const ua = request.headers.get("user-agent") || "";
     const { browser: uaBrowser, os: uaOs } = parseUserAgent(ua);
 
-    let body: any = {};
+    let body: Record<string, unknown> = {};
     try {
-      body = await request.json();
+      const parsed: unknown = await request.json();
+      if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) {
+        body = parsed as Record<string, unknown>;
+      }
     } catch {
       // Beacon or raw text
     }
@@ -50,20 +53,26 @@ export async function POST(request: Request) {
         ? "mobile"
         : "desktop";
 
+    const asString = (val: unknown, fallback: string): string =>
+      typeof val === "string" && val.trim() ? val : fallback;
+
     const session = recordVisitorSession({
       ip: rawIp,
       deviceType,
-      screenResolution: body.screenResolution || "უცნობი",
-      viewport: body.viewport || "უცნობი",
-      browser: body.browser || uaBrowser,
-      os: body.os || uaOs,
-      language: body.language || "ka",
+      screenResolution: asString(body.screenResolution, "უცნობი"),
+      viewport: asString(body.viewport, "უცნობი"),
+      browser: asString(body.browser, uaBrowser),
+      os: asString(body.os, uaOs),
+      language: asString(body.language, "ka"),
       batteryLevel: typeof body.batteryLevel === "number" ? body.batteryLevel : null,
       batteryCharging: typeof body.batteryCharging === "boolean" ? body.batteryCharging : null,
       batteryProtected: Boolean(body.batteryProtected),
-      page: body.page || "/",
-      referrer: body.referrer || "direct",
-      connectionType: body.connectionType || undefined,
+      page: asString(body.page, "/"),
+      referrer: asString(body.referrer, "direct"),
+      connectionType:
+        typeof body.connectionType === "string" && body.connectionType.trim()
+          ? body.connectionType
+          : undefined,
     });
 
     return NextResponse.json({ ok: true, id: session.id });

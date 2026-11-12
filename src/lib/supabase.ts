@@ -1,5 +1,5 @@
 import { createClient } from "@supabase/supabase-js";
-import type { PetListing, CreateListingPayload } from "@/data/listings-types";
+import type { PetListing } from "@/data/listings-types";
 
 const DEFAULT_SUPABASE_URL = "https://etxrjqodhxbbpcmwdkjb.supabase.co";
 const DEFAULT_ANON_KEY = "sb_publishable_M14kTz239MvcYwCvuDwH-A_ctplZszw";

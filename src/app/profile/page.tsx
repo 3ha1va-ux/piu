@@ -15,7 +15,7 @@ export default function MyListingsPage() {
   const [listings, setListings] = useState<PetListing[]>([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<"all" | "active" | "resolved">("all");
-  const [reloadKey, setReloadKey] = useState(0);
+  const [nowMs] = useState(() => Date.now());
 
   // Poster modal state
   const [selectedPosterListing, setSelectedPosterListing] =
@@ -29,13 +29,19 @@ export default function MyListingsPage() {
   useEffect(() => {
     let ignore = false;
     if (!user) {
-      setListings([]);
-      setLoading(false);
-      return;
+      const timer = setTimeout(() => {
+        if (ignore) return;
+        setListings([]);
+        setLoading(false);
+      }, 0);
+      return () => {
+        ignore = true;
+        clearTimeout(timer);
+      };
     }
 
-    setLoading(true);
     async function loadUserListings() {
+      setLoading(true);
       try {
         const {
           data: { session },
@@ -84,7 +90,7 @@ export default function MyListingsPage() {
     return () => {
       ignore = true;
     };
-  }, [user, reloadKey]);
+  }, [user]);
 
   // Update listing status (e.g. active <-> resolved / adopted)
   const handleStatusUpdate = async (
@@ -214,7 +220,7 @@ export default function MyListingsPage() {
 
   const getListingAge = (createdAt?: string) => {
     if (!createdAt) return { days: 0, isExpired: false, daysLeft: 45 };
-    const ms = Date.now() - new Date(createdAt).getTime();
+    const ms = nowMs - new Date(createdAt).getTime();
     const days = Math.floor(ms / (1000 * 60 * 60 * 24));
     return { days, isExpired: days >= 45, daysLeft: Math.max(0, 45 - days) };
   };

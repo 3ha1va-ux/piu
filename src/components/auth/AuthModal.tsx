@@ -4,8 +4,13 @@ import { useState, useEffect } from "react";
 import { useUserAuth } from "@/lib/userAuthContext";
 
 export default function AuthModal() {
+  const { isAuthModalOpen } = useUserAuth();
+  if (!isAuthModalOpen) return null;
+  return <AuthModalContent />;
+}
+
+function AuthModalContent() {
   const {
-    isAuthModalOpen,
     closeAuthModal,
     sendEmailOtp,
     verifyEmailOtp,
@@ -20,20 +25,8 @@ export default function AuthModal() {
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [countdown, setCountdown] = useState(0);
 
-  // Reset state whenever modal is opened / closed
-  useEffect(() => {
-    if (!isAuthModalOpen) {
-      setStep("email");
-      setEmail("");
-      setOtpCode("");
-      setErrorMessage(null);
-      setSuccessMessage(null);
-    }
-  }, [isAuthModalOpen]);
-
   // Close modal on Escape key press
   useEffect(() => {
-    if (!isAuthModalOpen) return;
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === "Escape") {
         closeAuthModal();
@@ -41,7 +34,7 @@ export default function AuthModal() {
     };
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [isAuthModalOpen, closeAuthModal]);
+  }, [closeAuthModal]);
 
   // Resend cooldown timer
   useEffect(() => {
@@ -51,8 +44,6 @@ export default function AuthModal() {
     }, 1000);
     return () => clearInterval(timer);
   }, [countdown]);
-
-  if (!isAuthModalOpen) return null;
 
   const handleGoogleClick = async () => {
     setIsSubmitting(true);

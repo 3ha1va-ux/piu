@@ -14,7 +14,8 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import type { ListingTone } from "@/data/listings-types";
 import { useUserAuth } from "@/lib/userAuthContext";
-import { TONE_COLORS, TONE_LABELS } from "@/lib/markerStyles";
+import { supabase } from "@/lib/supabase";
+import { TONE_LABELS } from "@/lib/markerStyles";
 import {
   emptyListingForm,
   FORM_STEPS,
@@ -284,8 +285,16 @@ export default function CreateListingForm() {
     setError(null);
 
     try {
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+      const accessToken = session?.access_token;
+      if (!accessToken) {
+        setError("სესია ვადაგასულია — გთხოვთ თავიდან გაიაროთ ავტორიზაცია.");
+        return;
+      }
+
       const body = new FormData();
-      body.set("userId", user.id);
       body.set("userEmail", user.email);
       body.set("tone", form.tone);
       body.set("animal", form.animal);
@@ -307,13 +316,67 @@ export default function CreateListingForm() {
       if (form.hasChip) body.set("hasChip", form.hasChip);
       for (const photo of form.photos) body.append("photos", photo);
       body.set("mainPhotoIndex", String(form.mainPhotoIndex));
-      if (form.video) body.set("video", form.video);
 
-      const res = await fetch("/api/listings", { method: "POST", body });
-      const data = (await res.json()) as {
+      if (form.video) {
+        const uploadUrlRes = await fetch("/api/listings/upload-url", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${accessToken}`,
+          },
+          body: JSON.stringify({
+            fileName: form.video.name,
+            mimeType: form.video.type || "video/mp4",
+            sizeBytes: form.video.size,
+          }),
+        });
+
+        if (uploadUrlRes.ok) {
+          const uploadMeta = (await uploadUrlRes.json()) as {
+            path: string;
+            token: string;
+            publicUrl: string;
+          };
+          const { error: uploadErr } = await supabase.storage
+            .from("pet-media")
+            .uploadToSignedUrl(uploadMeta.path, uploadMeta.token, form.video);
+          if (uploadErr) {
+            setError("ვიდეოს ატვირთვა ვერ მოხერხდა — სცადეთ თავიდან ან მოხსენით ვიდეო.");
+            return;
+          }
+          body.set("videoUrl", uploadMeta.publicUrl);
+        } else if (form.video.size <= 3_500_000) {
+          body.set("video", form.video);
+        } else {
+          setError("დიდი ვიდეოს ატვირთვა დროებით მიუწვდომელია — სცადეთ 3.5MB-მდე ვიდეო.");
+          return;
+        }
+      }
+
+      const res = await fetch("/api/listings", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+        },
+        body,
+      });
+
+      const rawText = await res.text();
+      let data: {
         listing?: { id: string };
         error?: string;
-      };
+      } = {};
+      try {
+        data = JSON.parse(rawText) as {
+          listing?: { id: string };
+          error?: string;
+        };
+      } catch {
+        if (res.status === 413) {
+          setError("ფაილების ჯამური ზომა ძალიან დიდია — სცადეთ ნაკლები ან უფრო პატარა ფოტოები.");
+          return;
+        }
+      }
 
       if (!res.ok || !data.listing) {
         setError(data.error ?? "განცხადების შენახვა ვერ მოხერხდა");
